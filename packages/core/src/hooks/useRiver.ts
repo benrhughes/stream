@@ -19,12 +19,24 @@ export interface RiverHook {
   dismiss: (id: string) => void;
   save: (id: string) => void;
   undo: () => void;
+  openItem: (id: string) => void;
 }
 
-export function useRiver(initialItems: ScoredArticle[]): RiverHook {
+export function useRiver(
+  initialItems: ScoredArticle[],
+  onOpen?: (article: Article) => void,
+): RiverHook {
   const [items, setItems] = useState<ScoredArticle[]>(initialItems);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [pendingUndo, setPendingUndo] = useState<DismissedItem | null>(null);
+
+  // Tracks dismissed IDs so a refresh doesn't resurrect them
+  const dismissedIds = useRef<Set<string>>(new Set());
+
+  // Sync when parent provides fresh scored articles (e.g. after refresh)
+  useEffect(() => {
+    setItems(initialItems.filter(s => !dismissedIds.current.has(s.article.id)));
+  }, [initialItems]);
 
   // Stale-ref: always holds current state for use inside stable callbacks
   const stateRef = useRef({ items, focusedIndex, pendingUndo });
@@ -40,9 +52,9 @@ export function useRiver(initialItems: ScoredArticle[]): RiverHook {
 
     const dismissed = current[atIndex];
 
-    // Cancel any in-flight undo
     if (existing) clearTimeout(existing.timerId);
 
+    dismissedIds.current.add(id);
     setItems(current.filter((_, i) => i !== atIndex));
 
     setFocusedIndex(fi => {
@@ -65,6 +77,7 @@ export function useRiver(initialItems: ScoredArticle[]): RiverHook {
     if (!existing) return;
 
     clearTimeout(existing.timerId);
+    dismissedIds.current.delete(existing.scored.article.id);
     setPendingUndo(null);
 
     setItems(prev => {
@@ -73,6 +86,12 @@ export function useRiver(initialItems: ScoredArticle[]): RiverHook {
       return next;
     });
   }, []);
+
+  const openItem = useCallback((id: string) => {
+    const { items: cur } = stateRef.current;
+    const found = cur.find(s => s.article.id === id);
+    if (found && onOpen) onOpen(found.article);
+  }, [onOpen]);
 
   // Keyboard navigation — single stable listener via stale-ref pattern
   useEffect(() => {
@@ -99,7 +118,7 @@ export function useRiver(initialItems: ScoredArticle[]): RiverHook {
         case 'o':
           if (fi >= 0 && fi < cur.length) {
             e.preventDefault();
-            window.open(cur[fi].article.url, '_blank', 'noopener,noreferrer');
+            if (onOpen) onOpen(cur[fi].article);
           }
           break;
         case 'd':
@@ -123,14 +142,7 @@ export function useRiver(initialItems: ScoredArticle[]): RiverHook {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [dismiss, save, undo]);
+  }, [dismiss, save, undo, onOpen]);
 
-  return {
-    items,
-    focusedIndex,
-    pendingUndo: pendingUndo ? { article: pendingUndo.scored.article } : null,
-    dismiss,
-    save,
-    undo,
-  };
+  return { items, focusedIndex, pendingUndo: pendingUndo ? { article: pendingUndo.scored.article } : null, dismiss, save, undo, openItem };
 }

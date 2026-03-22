@@ -26,6 +26,7 @@ interface RiverCardProps {
   isFocused: boolean;
   onDismiss: (id: string) => void;
   onSave: (id: string) => void;
+  onOpen: (id: string) => void;
   cardRef?: (el: HTMLElement | null) => void;
 }
 
@@ -35,6 +36,7 @@ export function RiverCard({
   isFocused,
   onDismiss,
   onSave,
+  onOpen,
   cardRef,
 }: RiverCardProps) {
   const { article } = scored;
@@ -100,16 +102,19 @@ export function RiverCard({
         </div>
       </div>
 
-      <a
+      <button
         class={styles.titleLink}
-        href={article.url}
-        target="_blank"
-        rel="noopener noreferrer"
+        onClick={() => onOpen(article.id)}
+        aria-label={`Read: ${article.title}`}
       >
         <h2 class={styles.title}>{article.title}</h2>
-      </a>
+      </button>
 
-      {preview && <p class={styles.preview}>{preview}</p>}
+      {preview && (
+        <p class={styles.preview} onClick={() => onOpen(article.id)} style={{ cursor: 'pointer' }}>
+          {preview}
+        </p>
+      )}
     </article>
   );
 }

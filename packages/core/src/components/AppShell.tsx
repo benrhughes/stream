@@ -16,6 +16,8 @@ interface AppShellProps {
   onToggleTheme: () => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  onSettings?: () => void;
+  inSettings?: boolean;
   iconSrc?: string;
   children: ComponentChildren;
 }
@@ -25,6 +27,8 @@ export function AppShell({
   onToggleTheme,
   onRefresh,
   refreshing,
+  onSettings,
+  inSettings,
   iconSrc = '/favicon.svg',
   children,
 }: AppShellProps) {
@@ -51,6 +55,16 @@ export function AppShell({
                 title="Refresh"
               >
                 ↻
+              </button>
+            )}
+            {onSettings && (
+              <button
+                class={`${styles.themeBtn} ${inSettings ? styles.active : ''}`}
+                onClick={onSettings}
+                aria-label={inSettings ? 'Back to river' : 'Velocity settings'}
+                title={inSettings ? 'Back to river' : 'Velocity'}
+              >
+                ≋
               </button>
             )}
             <button
