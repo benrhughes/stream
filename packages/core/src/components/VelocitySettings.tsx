@@ -18,10 +18,11 @@ interface VelocitySettingsProps {
   categories?: Category[];
   adapter?: StreamAdapter;
   onUpdate: (sourceId: string, tier: 1|2|3|4|5) => void;
+  onCategoryChange: (sourceId: string, categoryId: string) => void;
   onImported?: () => void;
 }
 
-export function VelocitySettings({ sources, categories, adapter, onUpdate, onImported }: VelocitySettingsProps) {
+export function VelocitySettings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported }: VelocitySettingsProps) {
   const [query, setQuery]             = useState('');
   const [importStatus, setImportStatus] = useState<AsyncStatus>({ type: 'idle' });
   const [addStatus, setAddStatus]     = useState<AsyncStatus>({ type: 'idle' });
@@ -161,7 +162,9 @@ export function VelocitySettings({ sources, categories, adapter, onUpdate, onImp
             <SourceRow
               key={source.id}
               source={source}
+              categories={categories}
               onUpdate={onUpdate}
+              onCategoryChange={onCategoryChange}
             />
           ))}
         </div>
@@ -172,12 +175,29 @@ export function VelocitySettings({ sources, categories, adapter, onUpdate, onImp
 
 interface SourceRowProps {
   source: Source;
+  categories?: Category[];
   onUpdate: (sourceId: string, tier: 1|2|3|4|5) => void;
+  onCategoryChange: (sourceId: string, categoryId: string) => void;
 }
 
-function SourceRow({ source, onUpdate }: SourceRowProps) {
+function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRowProps) {
   const handleFaviconError = (e: Event) => {
     (e.target as HTMLImageElement).setAttribute('data-error', '');
+  };
+
+  const handleCategorySelect = (e: Event) => {
+    const val = (e.target as HTMLSelectElement).value;
+    if (val === '__new__') {
+      const name = prompt('New category name:')?.trim();
+      if (name) {
+        onCategoryChange(source.id, name);
+      } else {
+        // Revert the select to its previous value
+        (e.target as HTMLSelectElement).value = source.categoryId ?? '';
+      }
+    } else {
+      onCategoryChange(source.id, val);
+    }
   };
 
   return (
@@ -199,6 +219,21 @@ function SourceRow({ source, onUpdate }: SourceRowProps) {
       <span class={styles.sourceName} title={source.title}>
         {source.title}
       </span>
+
+      {categories !== undefined && (
+        <select
+          class={styles.catSelect}
+          value={source.categoryId ?? ''}
+          onChange={handleCategorySelect}
+          aria-label={`Category for ${source.title}`}
+        >
+          <option value="">Uncategorized</option>
+          {categories.map(c => (
+            <option key={c.id} value={c.id}>{c.title}</option>
+          ))}
+          <option value="__new__">+ New category…</option>
+        </select>
+      )}
 
       <div class={styles.tiers} role="group" aria-label={`Velocity for ${source.title}`}>
         {TIERS.map(({ tier, label }) => (

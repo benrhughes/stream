@@ -79,6 +79,8 @@ export interface StreamAdapter {
   setArticleRead(articleId: string): Promise<void>;
   setArticleStarred(articleId: string, starred: boolean): Promise<void>;
 
+  setSourceCategory(sourceId: string, categoryId: string): Promise<void>;
+
   addSource(feedUrl: string): Promise<Source>;
   removeSource(sourceId: string): Promise<void>;
   importOPML(opmlXml: string): Promise<Source[]>;

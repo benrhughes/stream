@@ -181,6 +181,30 @@ export function App() {
     });
   }, []);
 
+  const handleCategoryChange = useCallback(async (sourceId: string, categoryId: string) => {
+    if (state.status !== 'settings') return;
+    const adapter = state.adapter;
+
+    // FreshRSS expects the full label stream ID; new names need the prefix added
+    let backendCategoryId = categoryId;
+    if (adapter.id === 'freshrss' && !categoryId.startsWith('user/-/label/')) {
+      backendCategoryId = `user/-/label/${categoryId}`;
+    }
+
+    try {
+      await adapter.setSourceCategory(sourceId, backendCategoryId);
+      // Re-fetch so the updated categoryId and any new category appear in state
+      const rawSources = await adapter.fetchSources();
+      const sources    = applySavedVelocity(rawSources, loadVelocityConfig());
+      const categories = await adapter.fetchCategories().catch(() => [] as Category[]);
+      setState(prev =>
+        prev.status === 'settings' ? { ...prev, sources, categories } : prev
+      );
+    } catch {
+      // Silent fail — source row will remain unchanged until next refresh
+    }
+  }, [state]);
+
   const handleRefresh = useCallback(async () => {
     if (state.status !== 'ready' || refreshing) return;
     setRefreshing(true);
@@ -270,6 +294,7 @@ export function App() {
                 categories={state.categories}
                 adapter={state.adapter}
                 onUpdate={handleVelocityUpdate}
+                onCategoryChange={handleCategoryChange}
                 onImported={handleImported}
               />
             )}

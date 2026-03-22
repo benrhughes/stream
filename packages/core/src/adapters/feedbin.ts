@@ -82,10 +82,11 @@ export class FeedbinAdapter implements StreamAdapter {
   readonly id   = 'feedbin';
   readonly name = 'Feedbin';
 
-  private credentials:     string | null        = null;
-  private feedIdToSubId  = new Map<string, string>();
-  private unreadIds      = new Set<string>();
-  private starredIds     = new Set<string>();
+  private credentials:        string | null        = null;
+  private feedIdToSubId     = new Map<string, string>();
+  private feedIdToTaggingId = new Map<string, number>();
+  private unreadIds         = new Set<string>();
+  private starredIds        = new Set<string>();
 
   // --- Authentication -------------------------------------------------------
 
@@ -123,10 +124,14 @@ export class FeedbinAdapter implements StreamAdapter {
     const subs: RawSubscription[] = await subsRes.json();
     const taggings: RawTagging[]  = taggingsRes.ok ? await taggingsRes.json() : [];
 
-    // Map feed_id → first tag name for categoryId
+    // Map feed_id → first tag name for categoryId; cache tagging IDs for moves
     const feedTag = new Map<number, string>();
+    this.feedIdToTaggingId.clear();
     for (const t of taggings) {
-      if (!feedTag.has(t.feed_id)) feedTag.set(t.feed_id, t.name);
+      if (!feedTag.has(t.feed_id)) {
+        feedTag.set(t.feed_id, t.name);
+        this.feedIdToTaggingId.set(String(t.feed_id), t.id);
+      }
     }
 
     this.feedIdToSubId.clear();
@@ -214,6 +219,33 @@ export class FeedbinAdapter implements StreamAdapter {
   }
 
   // --- Subscription management ---------------------------------------------
+
+  async setSourceCategory(sourceId: string, categoryId: string): Promise<void> {
+    // Delete existing tagging for this feed, if any
+    const oldTaggingId = this.feedIdToTaggingId.get(sourceId);
+    if (oldTaggingId !== undefined) {
+      await fetch(`${FEEDBIN_BASE}/taggings/${oldTaggingId}.json`, {
+        method:  'DELETE',
+        headers: this.authHeaders(),
+      });
+      this.feedIdToTaggingId.delete(sourceId);
+    }
+
+    // Create new tagging (categoryId is the tag name for Feedbin)
+    const res = await fetch(`${FEEDBIN_BASE}/taggings.json`, {
+      method:  'POST',
+      headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ feed_id: parseInt(sourceId, 10), name: categoryId }),
+    });
+    if (!res.ok && res.status !== 302) {
+      throw new Error(`setSourceCategory failed: HTTP ${res.status}`);
+    }
+
+    if (res.status === 201) {
+      const newTagging: RawTagging = await res.json();
+      this.feedIdToTaggingId.set(sourceId, newTagging.id);
+    }
+  }
 
   async addSource(feedUrl: string): Promise<Source> {
     const res = await fetch(`${FEEDBIN_BASE}/subscriptions.json`, {

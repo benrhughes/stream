@@ -278,6 +278,15 @@ export class FreshRSSAdapter implements StreamAdapter {
 
   // --- Subscription management ---------------------------------------------
 
+  async setSourceCategory(sourceId: string, categoryId: string): Promise<void> {
+    const res = await this.postForm('/reader/api/0/subscription/edit', {
+      ac: 'edit',
+      s:  sourceId,
+      a:  categoryId,  // e.g. "user/-/label/Technology" — created implicitly if new
+    });
+    if (!res.ok) throw new Error(`setSourceCategory failed: HTTP ${res.status}`);
+  }
+
   async addSource(feedUrl: string): Promise<Source> {
     const res = await this.postForm('/reader/api/0/subscription/quickadd', {
       quickadd: feedUrl,
