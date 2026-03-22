@@ -47,6 +47,22 @@
 
 .backBtn:hover { opacity: 0.75; }
 
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.saveBtn {
+  font-size: 1rem;
+  color: var(--text-muted);
+  transition: color var(--transition);
+  line-height: 1;
+}
+
+.saveBtn:hover  { color: var(--accent-saved); }
+.saveBtnActive  { color: var(--accent-saved); }
+
 .externalLink {
   font-family: var(--font-sans);
   font-size: 0.8125rem;

@@ -17,10 +17,12 @@ function sanitiseHtml(html: string): string {
 interface ReadingViewProps {
   article: Article;
   source?: Source;
+  isSaved?: boolean;
+  onSave?: () => void;
   onClose: () => void;
 }
 
-export function ReadingView({ article, source, onClose }: ReadingViewProps) {
+export function ReadingView({ article, source, isSaved, onSave, onClose }: ReadingViewProps) {
   const relTime = useRelativeTime(article.publishedAt);
 
   // Close on Escape
@@ -45,14 +47,26 @@ export function ReadingView({ article, source, onClose }: ReadingViewProps) {
           <button class={styles.backBtn} onClick={onClose} aria-label="Back to river">
             ← Stream
           </button>
-          <a
-            class={styles.externalLink}
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open original ↗
-          </a>
+          <div class={styles.toolbarRight}>
+            {onSave && (
+              <button
+                class={`${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}
+                onClick={onSave}
+                aria-label={isSaved ? 'Saved' : 'Save to Read Later'}
+                aria-pressed={isSaved}
+              >
+                {isSaved ? '\u2665' : '\u2661'}
+              </button>
+            )}
+            <a
+              class={styles.externalLink}
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open original ↗
+            </a>
+          </div>
         </div>
 
         {source && (

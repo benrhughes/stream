@@ -27,6 +27,7 @@ export function useRiver(
   initialItems: ScoredArticle[],
   onOpen?: (article: Article) => void,
   onSave?: (article: Article) => Promise<void>,
+  onRead?: (article: Article) => Promise<void>,
 ): RiverHook {
   const [items, setItems] = useState<ScoredArticle[]>(initialItems);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -59,6 +60,7 @@ export function useRiver(
 
     dismissedIds.current.add(id);
     setItems(current.filter((_, i) => i !== atIndex));
+    if (onRead) onRead(dismissed.article).catch(() => {});
 
     setFocusedIndex(fi => {
       if (fi === -1) return -1;
@@ -68,7 +70,7 @@ export function useRiver(
 
     const timerId = setTimeout(() => setPendingUndo(null), 5_000);
     setPendingUndo({ scored: dismissed, atIndex, timerId });
-  }, []);
+  }, [onRead]);
 
   const save = useCallback((id: string) => {
     const { items: cur } = stateRef.current;

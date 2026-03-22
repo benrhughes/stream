@@ -112,7 +112,6 @@ export function App() {
   const [state, setState] = useState<AppState>({ status: 'connect' });
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [openArticle, setOpenArticle] = useState<Article | null>(null);
 
   // Live score recalculation every 60s
   useEffect(() => {
@@ -242,7 +241,6 @@ export function App() {
               sources={state.sources}
               articles={state.articles}
               now={now}
-              onOpen={setOpenArticle}
               hidden={inSettings}
             />
             {inSettings && (
@@ -254,18 +252,6 @@ export function App() {
           </>
         )}
       </AppShell>
-
-      {openArticle && (
-        <ReadingView
-          article={openArticle}
-          source={
-            (state.status === 'ready' || state.status === 'settings')
-              ? state.sources.find(s => s.id === openArticle.sourceId)
-              : undefined
-          }
-          onClose={() => setOpenArticle(null)}
-        />
-      )}
     </>
   );
 }
@@ -335,20 +321,31 @@ interface ReadyViewProps {
   sources: Source[];
   articles: Article[];
   now: number;
-  onOpen: (article: Article) => void;
   hidden?: boolean;
 }
 
-function ReadyView({ adapter, sources, articles, now, onOpen, hidden }: ReadyViewProps) {
+function ReadyView({ adapter, sources, articles, now, hidden }: ReadyViewProps) {
+  const [openArticle, setOpenArticle] = useState<Article | null>(null);
+
   const sourceMap   = new Map(sources.map(s => [s.id, s]));
   const scoredItems = scoreRiver(articles, sourceMap, now);
+
+  const handleOpen = useCallback((article: Article) => {
+    setOpenArticle(article);
+    adapter.setArticleRead(article.id).catch(() => {});
+  }, [adapter]);
 
   const handleSave = useCallback(
     (article: Article) => adapter.setArticleStarred(article.id, true),
     [adapter],
   );
 
-  const river = useRiver(scoredItems, onOpen, handleSave);
+  const handleRead = useCallback(
+    (article: Article) => adapter.setArticleRead(article.id),
+    [adapter],
+  );
+
+  const river = useRiver(scoredItems, handleOpen, handleSave, handleRead);
 
   return (
     <div style={hidden ? { display: 'none' } : undefined}>
@@ -363,6 +360,15 @@ function ReadyView({ adapter, sources, articles, now, onOpen, hidden }: ReadyVie
         onOpen={river.openItem}
         onUndo={river.undo}
       />
+      {openArticle && (
+        <ReadingView
+          article={openArticle}
+          source={sourceMap.get(openArticle.sourceId)}
+          isSaved={river.savedIds.has(openArticle.id)}
+          onSave={() => river.save(openArticle.id)}
+          onClose={() => setOpenArticle(null)}
+        />
+      )}
     </div>
   );
 }
