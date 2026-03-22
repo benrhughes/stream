@@ -20,9 +20,19 @@ There are no unread counts. There is no mark-as-read. **You are not behind.**
 
 Stream is directly inspired by **[Current](https://www.terrygodier.com/current)** by Terry Godier — an RSS reader for iPhone, iPad, and Mac built around the same philosophy. Current's tagline is *"An RSS reader that doesn't count."* Its core argument: *"Every interface is an argument about how you should feel."*
 
-Current is Apple-only. Stream exists to bring the same ideas to self-hosted RSS users on any platform, via a web app and browser extension that connect to existing backends without replacing them.
+Current is Apple-only. Stream exists to bring the same ideas to self-hosted RSS users on any platform, via a web app that connects to an existing backend without replacing it.
 
-**Stream is a frontend only.** It requires an active FreshRSS or Feedbin account — it does not fetch or store feeds itself. If you do not already have one of those backends running, Stream will not work.
+**Stream is a frontend only.** It requires an active FreshRSS or Feedbin account — it does not fetch or store feeds itself.
+
+---
+
+## Getting a backend
+
+You need one of the following before Stream will work:
+
+**[Feedbin](https://feedbin.com)** — a polished hosted RSS service. $5/month, no setup required. Sign up, add your feeds, then connect Stream.
+
+**[FreshRSS](https://freshrss.net)** — open-source RSS aggregator with a free hosted option at [freshrss.net](https://freshrss.net), or self-host on your own server. FreshRSS requires a separate API password: set one under Settings → Profile → API management. Your regular login password will not work.
 
 ---
 
@@ -42,39 +52,32 @@ Visibility score: `0.5 ^ (elapsed / halfLife)`. Articles below 0.05 disappear. F
 
 ---
 
-## Status
-
-- [x] River engine with velocity-based aging
-- [x] FreshRSS adapter (Google Reader API)
-- [x] Feedbin adapter
-- [x] Web app (Vite SPA) — deploy to Netlify or any static host
-- [x] Browser extension (Firefox + Chrome, MV3) with built-in CORS proxy
-- [x] Light / dark themes (Nord colour scheme)
-- [x] Keyboard navigation (`j`/`k`, `d` dismiss, `s` save, `z` undo, `?` help)
-- [x] Velocity settings per source and per category
-- [x] Category filtering and unread-only toggle
-- [x] OPML import, add feed by URL
-- [x] Reading view with sanitised content
-- [x] Saved / starred view with toggle
-- [ ] Background sync + badge count (extension)
-- [ ] Firefox Add-ons / Chrome Web Store publication
-
----
-
 ## Architecture
 
-Three packages in an npm workspace monorepo:
+Two packages in an npm workspace monorepo:
 
 ```
 packages/
-  core/       Preact components, river engine, backend adapters
-  web/        Vite SPA — deploy alongside your RSS backend (same-origin)
-  extension/  Browser extension — Firefox and Chrome from one codebase (MV3)
+  core/   Preact components, river engine, backend adapters
+  web/    Vite SPA — deploy to Netlify or any static host
 ```
 
-`stream-core` knows nothing about where it runs. Both shells import the same `App` component and adapter classes.
+`stream-core` is framework-agnostic. The web shell imports the same `App` component and adapter classes.
 
-**Tech:** Preact · Vite · CSS Modules · IndexedDB (`idb`) · `webextension-polyfill`
+**Tech:** Preact · Vite · CSS Modules
+
+---
+
+## Getting started with Netlify
+
+The quickest way to run Stream is to deploy it to [Netlify](https://netlify.com) for free:
+
+1. Fork or clone this repo to your GitHub account.
+2. In Netlify, click **Add new site → Import an existing project** and connect your repo.
+3. Build settings are read from `netlify.toml` automatically — leave everything as-is and click **Deploy**.
+4. Once deployed, open your Netlify URL, enter your FreshRSS or Feedbin credentials, and you're done.
+
+A serverless proxy function is bundled with the build so Stream can reach self-hosted backends without any CORS configuration on your server.
 
 ---
 
@@ -85,19 +88,11 @@ npm install
 npm run dev   # → http://localhost:5173
 ```
 
-The dev server includes a reverse proxy that forwards API requests server-side, so CORS is handled automatically. Enter your backend root URL in the connect screen (e.g. `https://freshrss.example.com`).
-
-**FreshRSS note:** the Google Reader API requires a separate API password — set one under Settings → Profile → API management. Your regular login password will not work here.
+The dev server includes a reverse proxy that forwards API requests server-side, so CORS is handled automatically.
 
 ---
 
-## Deployment
-
-### Web app — Netlify (recommended)
-
-Connect this repo to [Netlify](https://netlify.com). Build settings are read from `netlify.toml` automatically — no configuration needed. A serverless proxy function is bundled with the build to handle CORS for self-hosted backends.
-
-### Web app — other static hosts
+## Deployment — other static hosts
 
 ```bash
 npm run build:web
@@ -113,26 +108,6 @@ add_header Access-Control-Allow-Methods "GET, POST";
 ```
 
 Feedbin users need no extra configuration — Feedbin supports CORS natively.
-
-### Browser extension
-
-The extension includes its own CORS proxy (background service worker), so it works with any backend without any server configuration.
-
-```bash
-npm run package:extension   # → stream-extension.zip
-```
-
-- **Firefox**: `about:debugging` → This Firefox → Load Temporary Add-on → select the zip
-- **Chrome**: `chrome://extensions` → Developer mode → Load unpacked → select `packages/extension/dist/`
-
-### Commands
-
-| Command | Output |
-|---------|--------|
-| `npm run dev` | Dev server at localhost:5173 |
-| `npm run build:web` | `packages/web/dist/` |
-| `npm run build:extension` | `packages/extension/dist/` |
-| `npm run package:extension` | `stream-extension.zip` |
 
 ---
 
