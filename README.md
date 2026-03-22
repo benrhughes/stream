@@ -14,6 +14,14 @@ There are no unread counts. There is no mark-as-read. **You are not behind.**
 
 ---
 
+## Inspiration
+
+Stream is directly inspired by **[Current](https://www.terrygodier.com/current)** by Terry Godier — an RSS reader for iPhone, iPad, and Mac built around the same philosophy. Current's tagline is *"An RSS reader that doesn't count."* Its core argument: *"Every interface is an argument about how you should feel."*
+
+Current is Apple-only. Stream exists to bring the same ideas to self-hosted RSS users on any platform, via a web app and browser extension that connect to existing backends without replacing them.
+
+---
+
 ## How it works
 
 Each source is assigned a velocity tier with a half-life in hours:
