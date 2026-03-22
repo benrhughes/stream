@@ -284,10 +284,21 @@ export class FreshRSSAdapter implements StreamAdapter {
     });
     if (!res.ok) throw new Error(`addSource failed: HTTP ${res.status}`);
 
-    // Re-fetch subscription list and find the new entry by URL
+    // quickadd returns { streamId: "feed/https://..." } — use that to find the
+    // new entry reliably, since FreshRSS may normalise the URL during storage.
+    let streamId: string | undefined;
+    try {
+      const data = await res.json();
+      streamId = typeof data?.streamId === 'string' ? data.streamId : undefined;
+    } catch { /* response may not be JSON on older versions */ }
+
     const sources = await this.fetchSources();
-    const added   = sources.find(s => s.feedUrl === feedUrl);
-    if (!added) throw new Error('Source added but not found in subscription list');
+
+    const added =
+      (streamId ? sources.find(s => s.id === streamId) : undefined) ??
+      sources.find(s => s.feedUrl === feedUrl);
+
+    if (!added) throw new Error('Feed added but not found in subscription list');
     return added;
   }
 
