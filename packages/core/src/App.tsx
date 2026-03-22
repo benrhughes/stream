@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'preact/hooks';
 import { scoreRiver } from './riverEngine.js';
 import { useRiver } from './hooks/useRiver.js';
+import { useTheme } from './hooks/useTheme.js';
 import { River } from './components/River.js';
+import { AppShell } from './components/AppShell.js';
 import type { Article, Source } from './types.js';
 import './theme.css';
 
@@ -189,6 +191,8 @@ const MOCK_ARTICLES: Article[] = [
 const SOURCE_MAP = new Map<string, Source>(MOCK_SOURCES.map(s => [s.id, s]));
 
 export function App() {
+  const { theme, toggle } = useTheme();
+
   // Recalculate scores every 60s so cards age visibly during a session
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -200,14 +204,16 @@ export function App() {
   const river = useRiver(scoredItems);
 
   return (
-    <River
-      items={river.items}
-      focusedIndex={river.focusedIndex}
-      sourceMap={SOURCE_MAP}
-      pendingUndo={river.pendingUndo}
-      onDismiss={river.dismiss}
-      onSave={river.save}
-      onUndo={river.undo}
-    />
+    <AppShell theme={theme} onToggleTheme={toggle}>
+      <River
+        items={river.items}
+        focusedIndex={river.focusedIndex}
+        sourceMap={SOURCE_MAP}
+        pendingUndo={river.pendingUndo}
+        onDismiss={river.dismiss}
+        onSave={river.save}
+        onUndo={river.undo}
+      />
+    </AppShell>
   );
 }
