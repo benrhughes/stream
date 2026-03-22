@@ -75,12 +75,12 @@ export function ConnectScreen({ onConnect, initialError }: ConnectScreenProps) {
         <form onSubmit={handleSubmit} noValidate>
           {backend === 'freshrss' && (
             <div class={styles.field}>
-              <label class={styles.label} for="freshrss-url">Server URL</label>
+              <label class={styles.label} for="freshrss-url">Server URL (root, not /api)</label>
               <input
                 id="freshrss-url"
                 class={styles.input}
                 type="url"
-                placeholder="https://your-freshrss-server.com"
+                placeholder="https://freshrss.example.com"
                 value={url}
                 onInput={e => setUrl((e.target as HTMLInputElement).value)}
                 required

@@ -38,17 +38,18 @@ function devProxyPlugin(): Plugin {
           const parsed    = new URL(targetUrl);
           const transport = parsed.protocol === 'https:' ? https : http;
 
+          // Forward headers but strip hop-by-hop / origin-sensitive ones
+          // and remove any undefined values (Node http.request rejects them)
+          const fwdHeaders: Record<string, string | string[]> = {};
+          for (const [k, v] of Object.entries(req.headers)) {
+            if (['host', 'origin', 'referer', 'connection'].includes(k)) continue;
+            if (v !== undefined) fwdHeaders[k] = v as string | string[];
+          }
+          fwdHeaders['host'] = parsed.host;
+
           const proxyReq = transport.request(
             targetUrl,
-            {
-              method:  req.method,
-              headers: {
-                ...req.headers,
-                host:    parsed.host,
-                origin:  undefined,
-                referer: undefined,
-              },
-            },
+            { method: req.method, headers: fwdHeaders },
             (proxyRes) => {
               res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
               proxyRes.pipe(res);
