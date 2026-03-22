@@ -274,16 +274,25 @@ export class FeedbinAdapter implements StreamAdapter {
   }
 
   async importOPML(opmlXml: string): Promise<Source[]> {
-    const parser   = new DOMParser();
-    const doc      = parser.parseFromString(opmlXml, 'application/xml');
-    const outlines = Array.from(doc.querySelectorAll('outline[xmlUrl]'));
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(opmlXml, 'application/xml');
 
     const added: Source[] = [];
-    for (const el of outlines) {
+    for (const el of Array.from(doc.querySelectorAll('outline[xmlUrl]'))) {
       const url = el.getAttribute('xmlUrl');
-      if (url) {
-        try { added.push(await this.addSource(url)); } catch { /* skip on error */ }
-      }
+      if (!url) continue;
+      const parent   = el.parentElement;
+      const rawCat   = parent?.tagName.toLowerCase() === 'outline'
+        ? (parent.getAttribute('text') || parent.getAttribute('title'))
+        : null;
+      const categoryName = rawCat || undefined;
+      try {
+        const source = await this.addSource(url);
+        if (categoryName) {
+          try { await this.setSourceCategory(source.id, categoryName); } catch {}
+        }
+        added.push(source);
+      } catch { /* skip unreachable or duplicate feeds */ }
     }
     return added;
   }

@@ -320,20 +320,58 @@ export class FreshRSSAdapter implements StreamAdapter {
   }
 
   async importOPML(opmlXml: string): Promise<Source[]> {
-    // FreshRSS has no native OPML import endpoint.
-    // Parse client-side and add each feed URL individually.
-    const parser  = new DOMParser();
-    const doc     = parser.parseFromString(opmlXml, 'application/xml');
-    const outlines = Array.from(doc.querySelectorAll('outline[xmlUrl]'));
+    // FreshRSS has no native OPML import endpoint — add feeds individually.
+    // Batches the verification fetchSources to a single call at the end, and
+    // reads parent <outline> elements to preserve OPML category structure.
+    const parser = new DOMParser();
+    const doc    = parser.parseFromString(opmlXml, 'application/xml');
 
-    const added: Source[] = [];
-    for (const el of outlines) {
+    // Collect entries with their OPML category (parent outline text/title)
+    const entries: Array<{ url: string; categoryName?: string }> = [];
+    for (const el of Array.from(doc.querySelectorAll('outline[xmlUrl]'))) {
       const url = el.getAttribute('xmlUrl');
-      if (url) {
-        try { added.push(await this.addSource(url)); } catch { /* skip on error */ }
-      }
+      if (!url) continue;
+      const parent    = el.parentElement;
+      const rawCat    = parent?.tagName.toLowerCase() === 'outline'
+        ? (parent.getAttribute('text') || parent.getAttribute('title'))
+        : null;
+      entries.push({ url, categoryName: rawCat || undefined });
     }
-    return added;
+
+    // quickadd each feed; collect streamIds for a single fetchSources at the end
+    const pending: Array<{ streamId?: string; url: string; categoryName?: string }> = [];
+    for (const { url, categoryName } of entries) {
+      try {
+        const res = await this.postForm('/reader/api/0/subscription/quickadd', { quickadd: url });
+        if (!res.ok) continue;
+        let streamId: string | undefined;
+        try {
+          const data = await res.json();
+          if (typeof data?.streamId === 'string') streamId = data.streamId;
+        } catch { /* older FreshRSS may not return JSON */ }
+        pending.push({ streamId, url, categoryName });
+      } catch { /* skip unreachable feeds */ }
+    }
+
+    if (pending.length === 0) return [];
+
+    // One fetchSources for the whole batch
+    const allSources = await this.fetchSources();
+    const byId  = new Map(allSources.map(s => [s.id,      s]));
+    const byUrl = new Map(allSources.map(s => [s.feedUrl, s]));
+
+    const result: Source[] = [];
+    for (const { streamId, url, categoryName } of pending) {
+      const source = (streamId ? byId.get(streamId) : undefined) ?? byUrl.get(url);
+      if (!source) continue;
+      if (categoryName) {
+        try {
+          await this.setSourceCategory(source.id, `user/-/label/${categoryName}`);
+        } catch { /* category assignment is best-effort */ }
+      }
+      result.push(source);
+    }
+    return result;
   }
 
   // --- Private --------------------------------------------------------------
