@@ -10,7 +10,7 @@ A velocity-based RSS reader. Articles arrive, linger, and fade — they are not 
 
 Every mainstream RSS reader inherits the same foundational assumption from Brent Simmons' NetNewsWire (2002): feeds are an inbox, articles are items to be processed, and falling behind is a failure state. Unread counts, mark-as-read buttons, and three-pane layouts all reinforce what Terry Godier calls **phantom obligation** — guilt for something no one asked you to do.
 
-Stream is a different kind of frontend for the same backends. It does not fetch or store feeds. It connects to FreshRSS, Miniflux, Feedbin, or NewsBlur via their existing APIs and presents what it finds as a river: things that arrived, each fading at a rate appropriate to its source. A breaking news feed fades in hours. A personal essay lingers for days. A prolific source cannot drown out a thoughtful one.
+Stream is a different kind of frontend for the same backends. It does not fetch or store feeds. It connects to FreshRSS or Feedbin via their existing APIs and presents what it finds as a river: things that arrived, each fading at a rate appropriate to its source. A breaking news feed fades in hours. A personal essay lingers for days. A prolific source cannot drown out a thoughtful one.
 
 There are no unread counts. There is no mark-as-read. **You are not behind.**
 
@@ -53,7 +53,7 @@ Visibility score: `0.5 ^ (elapsed / halfLife)`. Articles below 0.05 disappear. F
 - [x] Category filtering and unread-only toggle
 - [x] OPML import, add feed by URL
 - [x] Reading view with sanitised content
-- [ ] Saved / Read Later view
+- [x] Saved / starred view with toggle
 - [ ] Background sync + badge count (extension)
 - [ ] Firefox Add-ons / Chrome Web Store publication
 
@@ -102,7 +102,7 @@ npm run build:web
 # deploy packages/web/dist/ to your host
 ```
 
-For self-hosted FreshRSS/Miniflux, your backend must send CORS headers. Add to your nginx config:
+For self-hosted FreshRSS, your backend must send CORS headers. Add to your nginx config:
 
 ```nginx
 add_header Access-Control-Allow-Origin  "*";
