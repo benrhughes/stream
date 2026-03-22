@@ -2,6 +2,23 @@ import type { ComponentChildren } from 'preact';
 import type { ResolvedTheme } from '../hooks/useTheme.js';
 import styles from './AppShell.module.css';
 
+// Inline SVG so stroke inherits currentColor — follows app theme, not OS preference
+function StreamLogo({ class: cls }: { class?: string }) {
+  return (
+    <svg class={cls} viewBox="0 0 32 32" width={22} height={22} fill="none" aria-hidden="true">
+      <defs>
+        <clipPath id="wc"><circle cx="16" cy="16" r="13"/></clipPath>
+      </defs>
+      <circle cx="16" cy="16" r="14.5" stroke="currentColor" stroke-width="1.5"/>
+      <g clip-path="url(#wc)" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+        <path d="M2 10 Q9 6 16 10 Q23 14 30 10"/>
+        <path d="M2 16 Q9 12 16 16 Q23 20 30 16"/>
+        <path d="M2 22 Q9 18 16 22 Q23 26 30 22"/>
+      </g>
+    </svg>
+  );
+}
+
 const THEME_ICON: Record<ResolvedTheme, string> = {
   paper: '☽',
   ink:   '☀',
@@ -18,7 +35,6 @@ interface AppShellProps {
   refreshing?: boolean;
   onSettings?: () => void;
   inSettings?: boolean;
-  iconSrc?: string;
   children: ComponentChildren;
 }
 
@@ -29,21 +45,13 @@ export function AppShell({
   refreshing,
   onSettings,
   inSettings,
-  iconSrc = '/favicon.svg',
   children,
 }: AppShellProps) {
   return (
     <>
       <header class={styles.header}>
         <div class={styles.inner}>
-          <img
-            class={styles.logo}
-            src={iconSrc}
-            alt=""
-            aria-hidden="true"
-            width={22}
-            height={22}
-          />
+          <StreamLogo class={styles.logo} />
           <span class={styles.wordmark}>Stream</span>
           <div class={styles.controls}>
             {onRefresh && (
