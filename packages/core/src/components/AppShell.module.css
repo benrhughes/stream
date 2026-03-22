@@ -15,6 +15,13 @@
   align-items: center;
 }
 
+.logo {
+  display: block;
+  flex-shrink: 0;
+  margin-right: 0.375rem;
+  opacity: 0.85;
+}
+
 .wordmark {
   font-family: var(--font-serif);
   font-size: 1.125rem;

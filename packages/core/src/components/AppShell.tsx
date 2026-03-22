@@ -16,6 +16,7 @@ interface AppShellProps {
   onToggleTheme: () => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  iconSrc?: string;
   children: ComponentChildren;
 }
 
@@ -24,12 +25,21 @@ export function AppShell({
   onToggleTheme,
   onRefresh,
   refreshing,
+  iconSrc = '/favicon.svg',
   children,
 }: AppShellProps) {
   return (
     <>
       <header class={styles.header}>
         <div class={styles.inner}>
+          <img
+            class={styles.logo}
+            src={iconSrc}
+            alt=""
+            aria-hidden="true"
+            width={22}
+            height={22}
+          />
           <span class={styles.wordmark}>Stream</span>
           <div class={styles.controls}>
             {onRefresh && (

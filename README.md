@@ -1,3 +1,5 @@
+<img src="packages/web/public/favicon.svg" width="48" alt="Stream icon" />
+
 # Stream
 
 A velocity-based RSS reader. Articles arrive, linger, and fade — they are not tasks to be cleared.
