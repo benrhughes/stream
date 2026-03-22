@@ -22,6 +22,8 @@ Stream is directly inspired by **[Current](https://www.terrygodier.com/current)*
 
 Current is Apple-only. Stream exists to bring the same ideas to self-hosted RSS users on any platform, via a web app and browser extension that connect to existing backends without replacing them.
 
+**Stream is a frontend only.** It requires an active FreshRSS or Feedbin account — it does not fetch or store feeds itself. If you do not already have one of those backends running, Stream will not work.
+
 ---
 
 ## How it works
