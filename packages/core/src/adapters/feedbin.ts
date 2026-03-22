@@ -114,19 +114,30 @@ export class FeedbinAdapter implements StreamAdapter {
   // --- Data -----------------------------------------------------------------
 
   async fetchSources(): Promise<Source[]> {
-    const res = await fetch(`${FEEDBIN_BASE}/subscriptions.json`, {
-      headers: this.authHeaders(),
-    });
-    if (!res.ok) throw new Error(`fetchSources failed: HTTP ${res.status}`);
+    const [subsRes, taggingsRes] = await Promise.all([
+      fetch(`${FEEDBIN_BASE}/subscriptions.json`, { headers: this.authHeaders() }),
+      fetch(`${FEEDBIN_BASE}/taggings.json`,      { headers: this.authHeaders() }),
+    ]);
+    if (!subsRes.ok) throw new Error(`fetchSources failed: HTTP ${subsRes.status}`);
 
-    const subs: RawSubscription[] = await res.json();
+    const subs: RawSubscription[] = await subsRes.json();
+    const taggings: RawTagging[]  = taggingsRes.ok ? await taggingsRes.json() : [];
+
+    // Map feed_id → first tag name for categoryId
+    const feedTag = new Map<number, string>();
+    for (const t of taggings) {
+      if (!feedTag.has(t.feed_id)) feedTag.set(t.feed_id, t.name);
+    }
 
     this.feedIdToSubId.clear();
     for (const sub of subs) {
       this.feedIdToSubId.set(String(sub.feed_id), String(sub.id));
     }
 
-    return subs.map(normaliseSource);
+    return subs.map(sub => ({
+      ...normaliseSource(sub),
+      categoryId: feedTag.get(sub.feed_id),
+    }));
   }
 
   async fetchCategories(): Promise<Category[]> {

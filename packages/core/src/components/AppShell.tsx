@@ -35,6 +35,7 @@ interface AppShellProps {
   refreshing?: boolean;
   onSettings?: () => void;
   inSettings?: boolean;
+  onLogoClick?: () => void;
   children: ComponentChildren;
 }
 
@@ -45,14 +46,29 @@ export function AppShell({
   refreshing,
   onSettings,
   inSettings,
+  onLogoClick,
   children,
 }: AppShellProps) {
   return (
     <>
       <header class={styles.header}>
         <div class={styles.inner}>
-          <StreamLogo class={styles.logo} />
-          <span class={styles.wordmark}>Stream</span>
+          {onLogoClick ? (
+            <button
+              class={styles.logoBtn}
+              onClick={onLogoClick}
+              aria-label="Back to river"
+              title="Back to river"
+            >
+              <StreamLogo class={styles.logo} />
+              <span class={styles.wordmark}>Stream</span>
+            </button>
+          ) : (
+            <>
+              <StreamLogo class={styles.logo} />
+              <span class={styles.wordmark}>Stream</span>
+            </>
+          )}
           <div class={styles.controls}>
             {onRefresh && (
               <button

@@ -1,0 +1,54 @@
+.bar {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+}
+
+.cats::-webkit-scrollbar {
+  display: none;
+}
+
+.pill {
+  padding: 0.1875rem 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.pill:hover {
+  border-color: var(--accent-new);
+  color: var(--text);
+}
+
+.pill.active {
+  background: var(--accent-new);
+  border-color: var(--accent-new);
+  color: var(--bg);
+}
+
+/* When there are no categories, push unread toggle to the right */
+.solo {
+  margin-left: auto;
+}

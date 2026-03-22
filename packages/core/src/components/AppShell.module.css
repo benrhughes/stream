@@ -31,6 +31,28 @@
   flex: 1;
 }
 
+/* When logo + wordmark are wrapped in a clickable button */
+.logoBtn {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  color: inherit;  /* ensure SVG currentColor and wordmark track --text */
+  transition: opacity var(--transition);
+}
+
+.logoBtn:hover {
+  opacity: 0.7;
+}
+
+.logoBtn .wordmark {
+  flex: none;
+}
+
 .controls {
   display: flex;
   align-items: center;

@@ -8,9 +8,10 @@ import { ConnectScreen } from './components/ConnectScreen.js';
 import { VelocitySettings } from './components/VelocitySettings.js';
 import { ReadingView } from './components/ReadingView.js';
 import { KeyboardHelp } from './components/KeyboardHelp.js';
+import { FilterBar } from './components/FilterBar.js';
 import { FreshRSSAdapter } from './adapters/freshrss.js';
 import { FeedbinAdapter } from './adapters/feedbin.js';
-import type { Article, Source, StreamAdapter, AdapterConfig } from './types.js';
+import type { Article, Category, Source, StreamAdapter, AdapterConfig } from './types.js';
 import './theme.css';
 
 // ---------------------------------------------------------------------------
@@ -104,8 +105,8 @@ async function fetchAllArticles(
 type AppState =
   | { status: 'connect';   error?: string }
   | { status: 'loading';   adapter: StreamAdapter }
-  | { status: 'ready';     adapter: StreamAdapter; sources: Source[]; articles: Article[] }
-  | { status: 'settings';  adapter: StreamAdapter; sources: Source[]; articles: Article[] }
+  | { status: 'ready';     adapter: StreamAdapter; sources: Source[]; articles: Article[]; categories: Category[] }
+  | { status: 'settings';  adapter: StreamAdapter; sources: Source[]; articles: Article[]; categories: Category[] }
   | { status: 'error';     message: string };
 
 export function App() {
@@ -125,8 +126,11 @@ export function App() {
     try {
       const rawSources = await adapter.fetchSources();
       const sources    = applySavedVelocity(rawSources, loadVelocityConfig());
-      const articles   = await fetchAllArticles(adapter, sources);
-      setState({ status: 'ready', adapter, sources, articles });
+      const [articles, categories] = await Promise.all([
+        fetchAllArticles(adapter, sources),
+        adapter.fetchCategories().catch(() => [] as Category[]),
+      ]);
+      setState({ status: 'ready', adapter, sources, articles, categories });
     } catch (err) {
       setState({
         status: 'error',
@@ -185,9 +189,10 @@ export function App() {
         await state.adapter.fetchSources(), loadVelocityConfig()
       );
       const articles = await fetchAllArticles(state.adapter, sources);
+      const categories = await state.adapter.fetchCategories().catch(() => [] as Category[]);
       setState(prev =>
         prev.status === 'ready'
-          ? { ...prev, sources, articles }
+          ? { ...prev, sources, articles, categories }
           : prev
       );
     } catch {
@@ -229,6 +234,7 @@ export function App() {
         refreshing={refreshing}
         onSettings={isReady ? handleSettings : undefined}
         inSettings={inSettings}
+        onLogoClick={inSettings ? handleSettings : undefined}
       >
         {state.status === 'connect' && (
           <ConnectScreen
@@ -254,12 +260,14 @@ export function App() {
               adapter={state.adapter}
               sources={state.sources}
               articles={state.articles}
+              categories={state.categories}
               now={now}
               hidden={inSettings}
             />
             {inSettings && (
               <VelocitySettings
                 sources={state.sources}
+                categories={state.categories}
                 adapter={state.adapter}
                 onUpdate={handleVelocityUpdate}
                 onImported={handleImported}
@@ -336,13 +344,16 @@ interface ReadyViewProps {
   adapter: StreamAdapter;
   sources: Source[];
   articles: Article[];
+  categories: Category[];
   now: number;
   hidden?: boolean;
 }
 
-function ReadyView({ adapter, sources, articles, now, hidden }: ReadyViewProps) {
-  const [openArticle, setOpenArticle] = useState<Article | null>(null);
-  const [showHelp, setShowHelp]       = useState(false);
+function ReadyView({ adapter, sources, articles, categories, now, hidden }: ReadyViewProps) {
+  const [openArticle, setOpenArticle]     = useState<Article | null>(null);
+  const [showHelp, setShowHelp]           = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [unreadOnly, setUnreadOnly]       = useState(false);
 
   // Global '?' shortcut — only when not typing in an input
   useEffect(() => {
@@ -354,8 +365,18 @@ function ReadyView({ adapter, sources, articles, now, hidden }: ReadyViewProps) 
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const sourceMap   = new Map(sources.map(s => [s.id, s]));
-  const scoredItems = scoreRiver(articles, sourceMap, now);
+  const sourceMap = new Map(sources.map(s => [s.id, s]));
+
+  const filteredArticles = articles.filter(a => {
+    if (unreadOnly && a.isRead) return false;
+    if (activeCategory !== null) {
+      const src = sourceMap.get(a.sourceId);
+      if (!src || src.categoryId !== activeCategory) return false;
+    }
+    return true;
+  });
+
+  const scoredItems = scoreRiver(filteredArticles, sourceMap, now);
 
   const handleOpen = useCallback((article: Article) => {
     setOpenArticle(article);
@@ -376,6 +397,13 @@ function ReadyView({ adapter, sources, articles, now, hidden }: ReadyViewProps) 
 
   return (
     <div style={hidden ? { display: 'none' } : undefined}>
+      <FilterBar
+        categories={categories}
+        activeCategory={activeCategory}
+        unreadOnly={unreadOnly}
+        onCategory={setActiveCategory}
+        onUnreadOnly={setUnreadOnly}
+      />
       <River
         items={river.items}
         focusedIndex={river.focusedIndex}

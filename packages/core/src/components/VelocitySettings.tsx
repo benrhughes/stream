@@ -1,5 +1,5 @@
 import { useState, useRef } from 'preact/hooks';
-import type { Source, StreamAdapter } from '../types.js';
+import type { Category, Source, StreamAdapter } from '../types.js';
 import { HALF_LIVES } from '../riverEngine.js';
 import styles from './VelocitySettings.module.css';
 
@@ -15,12 +15,13 @@ type AsyncStatus = { type: 'idle' } | { type: 'loading' } | { type: 'ok'; messag
 
 interface VelocitySettingsProps {
   sources: Source[];
+  categories?: Category[];
   adapter?: StreamAdapter;
   onUpdate: (sourceId: string, tier: 1|2|3|4|5) => void;
   onImported?: () => void;
 }
 
-export function VelocitySettings({ sources, adapter, onUpdate, onImported }: VelocitySettingsProps) {
+export function VelocitySettings({ sources, categories, adapter, onUpdate, onImported }: VelocitySettingsProps) {
   const [query, setQuery]             = useState('');
   const [importStatus, setImportStatus] = useState<AsyncStatus>({ type: 'idle' });
   const [addStatus, setAddStatus]     = useState<AsyncStatus>({ type: 'idle' });
@@ -126,6 +127,23 @@ export function VelocitySettings({ sources, adapter, onUpdate, onImported }: Vel
         </form>
       )}
 
+      {categories && categories.length > 0 && (
+        <>
+          <h3 class={styles.sectionHeading}>Categories</h3>
+          <div class={styles.list} role="list">
+            {categories.map(cat => (
+              <CategoryRow
+                key={cat.id}
+                category={cat}
+                sources={sources}
+                onUpdate={onUpdate}
+              />
+            ))}
+          </div>
+          <h3 class={styles.sectionHeading}>Sources</h3>
+        </>
+      )}
+
       <input
         class={styles.search}
         type="search"
@@ -202,4 +220,49 @@ function SourceRow({ source, onUpdate }: SourceRowProps) {
 function tierTitle(tier: 1|2|3|4|5): string {
   const names = ['Breaking', 'News', 'Article', 'Essay', 'Evergreen'];
   return names[tier - 1];
+}
+
+interface CategoryRowProps {
+  category: Category;
+  sources: Source[];
+  onUpdate: (sourceId: string, tier: 1|2|3|4|5) => void;
+}
+
+function CategoryRow({ category, sources, onUpdate }: CategoryRowProps) {
+  const catSources = sources.filter(s => s.categoryId === category.id);
+
+  // If all sources in the category share the same tier, show it as active
+  const sharedTier: 1|2|3|4|5 | null =
+    catSources.length > 0 && catSources.every(s => s.velocityTier === catSources[0].velocityTier)
+      ? catSources[0].velocityTier
+      : null;
+
+  const handleTier = (tier: 1|2|3|4|5) => {
+    for (const s of catSources) onUpdate(s.id, tier);
+  };
+
+  return (
+    <div class={styles.row} role="listitem">
+      <span class={styles.catIcon} aria-hidden="true">◈</span>
+      <span class={styles.sourceName} title={category.title}>
+        {category.title}
+        {catSources.length > 0 && (
+          <span class={styles.catCount}> · {catSources.length}</span>
+        )}
+      </span>
+      <div class={styles.tiers} role="group" aria-label={`Velocity for ${category.title}`}>
+        {TIERS.map(({ tier, label }) => (
+          <button
+            key={tier}
+            class={`${styles.tierBtn} ${sharedTier === tier ? styles.active : ''}`}
+            onClick={() => handleTier(tier)}
+            aria-pressed={sharedTier === tier}
+            title={tierTitle(tier)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
