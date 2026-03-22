@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Kin semantic VCS
+.kin/
+
+# Markdown (keep only canonical docs)
+*.md
+!README.md
+!CHANGELOG.md
+!LICENSE.md
+
+# Extension build artifacts
+*.crx
+*.xpi
+*.zip
+
+# Cache
+.cache/
