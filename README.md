@@ -37,6 +37,14 @@ The quickest way to run Stream is to deploy it to [Netlify](https://netlify.com)
 
 ---
 
+## Your credentials
+
+Your Feedbin or FreshRSS username and password are stored only in your own browser. Stream does not have a central server, and nothing is sent to anyone but your RSS service.
+
+When you deploy to Netlify, API requests pass through a small function on your own Netlify account before reaching Feedbin or FreshRSS. That function sees your credentials on every request, so anyone with access to your Netlify account could find them in the function logs. For a personal deployment this is not a concern — it is your own account. It is worth bearing in mind if you ever share a single deployment with other people.
+
+---
+
 ## How it works
 
 Each feed is assigned a velocity tier. This controls how quickly articles fade:
@@ -83,7 +91,7 @@ add_header Access-Control-Allow-Headers "Authorization, Content-Type";
 add_header Access-Control-Allow-Methods "GET, POST";
 ```
 
-Feedbin users need no extra configuration — Feedbin supports CORS natively.
+Feedbin users need no extra configuration beyond what is described above.
 
 </details>
 
