@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- Display version number in header, bottom-aligned next to the Stream logo
+- Settings footer with product page link and AGPL-3.0 licence (GitHub logo)
+- Fix header logo shifting when toggling between stream and settings views
+- Enable `resolveJsonModule` in tsconfig for package.json version import
+
 ## 0.3.0
 
 ### Settings panel

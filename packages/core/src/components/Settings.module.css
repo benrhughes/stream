@@ -315,3 +315,35 @@ details[open] > .sectionHeading::before {
 .catSelect:hover {
   border-color: var(--accent-new);
 }
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 0 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.footerLink:hover {
+  color: var(--text);
+}
+
+.footerSep {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  opacity: 0.5;
+}

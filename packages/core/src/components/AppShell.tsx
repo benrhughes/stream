@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import type { ResolvedTheme } from '../hooks/useTheme.js';
+import { version } from '../../package.json';
 import styles from './AppShell.module.css';
 
 // Inline SVG so stroke inherits currentColor — follows app theme, not OS preference
@@ -53,22 +54,20 @@ export function AppShell({
     <>
       <header class={styles.header}>
         <div class={styles.inner}>
-          {onLogoClick ? (
+          <div class={styles.brand}>
             <button
               class={styles.logoBtn}
-              onClick={onLogoClick}
-              aria-label="Back to stream"
-              title="Back to stream"
+              onClick={onLogoClick ?? undefined}
+              aria-label={onLogoClick ? 'Back to stream' : undefined}
+              title={onLogoClick ? 'Back to stream' : undefined}
+              tabIndex={onLogoClick ? 0 : -1}
+              style={onLogoClick ? undefined : { cursor: 'default' }}
             >
               <StreamLogo class={styles.logo} />
               <span class={styles.wordmark}>Stream</span>
             </button>
-          ) : (
-            <>
-              <StreamLogo class={styles.logo} />
-              <span class={styles.wordmark}>Stream</span>
-            </>
-          )}
+            <span class={styles.version}>{version}</span>
+          </div>
           <div class={styles.controls}>
             {onRefresh && (
               <button
