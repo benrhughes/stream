@@ -53,11 +53,14 @@ export function scoreRiver(
   articles: Article[],
   sourceMap: Map<string, Source>,
   now: number,
+  preserveAll = false,
 ): ScoredArticle[] {
   return articles
     .flatMap((article) => {
       const source = sourceMap.get(article.sourceId);
       if (!source) return [];
+
+      if (preserveAll) return [{ article, score: 1 }];
 
       const halfLife = resolveHalfLife(source);
       const score = visibilityScore(article.publishedAt, halfLife, now);

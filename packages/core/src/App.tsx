@@ -111,7 +111,9 @@ type AppState =
 
 export function App() {
   const { theme, toggle } = useTheme();
-  const [state, setState] = useState<AppState>({ status: 'connect' });
+  const [state, setState] = useState<AppState>(
+    loadSavedConnection() ? { status: 'loading', adapter: null! } : { status: 'connect' },
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -320,7 +322,7 @@ function LoadingView() {
       color: 'var(--text-muted)',
       fontSize: '1rem',
     }}>
-      Loading your river…
+      Loading your stream…
     </div>
   );
 }
@@ -405,7 +407,9 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden }: Read
     return true;
   });
 
-  const scoredItems = scoreRiver(filteredArticles, sourceMap, now);
+  const scoredItems = savedOnly
+    ? scoreRiver(filteredArticles, sourceMap, now, true)
+    : scoreRiver(filteredArticles, sourceMap, now);
 
   const handleOpen = useCallback((article: Article) => {
     setOpenArticle(article);
@@ -442,7 +446,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden }: Read
       .map(a => a.id),
   );
 
-  const emptyMessage = savedOnly ? 'No saved articles yet.' : 'The river is quiet.';
+  const emptyMessage = savedOnly ? 'No saved articles yet.' : 'The stream is quiet.';
 
   return (
     <div style={hidden ? { display: 'none' } : undefined}>

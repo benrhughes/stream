@@ -24,7 +24,7 @@ export function River({
   sourceMap,
   savedIds,
   pendingUndo,
-  emptyMessage = 'The river is quiet.',
+  emptyMessage = 'The stream is quiet.',
   onDismiss,
   onSave,
   onOpen,
@@ -51,7 +51,7 @@ export function River({
   }
 
   return (
-    <div class={styles.river} role="feed" aria-label="Article river">
+    <div class={styles.river} role="feed" aria-label="Article stream">
       {items.map((scored, index) => {
         const source = sourceMap.get(scored.article.sourceId);
         if (!source) return null;

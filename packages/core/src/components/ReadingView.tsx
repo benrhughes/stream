@@ -44,7 +44,7 @@ export function ReadingView({ article, source, isSaved, onSave, onClose }: Readi
     <div class={styles.overlay} role="dialog" aria-modal="true" aria-label={article.title}>
       <div class={styles.inner}>
         <div class={styles.toolbar}>
-          <button class={styles.backBtn} onClick={onClose} aria-label="Back to river">
+          <button class={styles.backBtn} onClick={onClose} aria-label="Back to stream">
             ← Stream
           </button>
           <div class={styles.toolbarRight}>

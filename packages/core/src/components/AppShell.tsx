@@ -57,8 +57,8 @@ export function AppShell({
             <button
               class={styles.logoBtn}
               onClick={onLogoClick}
-              aria-label="Back to river"
-              title="Back to river"
+              aria-label="Back to stream"
+              title="Back to stream"
             >
               <StreamLogo class={styles.logo} />
               <span class={styles.wordmark}>Stream</span>
@@ -85,8 +85,8 @@ export function AppShell({
               <button
                 class={`${styles.themeBtn} ${inSettings ? styles.active : ''}`}
                 onClick={onSettings}
-                aria-label={inSettings ? 'Back to river' : 'Velocity settings'}
-                title={inSettings ? 'Back to river' : 'Velocity'}
+                aria-label={inSettings ? 'Back to stream' : 'Velocity settings'}
+                title={inSettings ? 'Back to stream' : 'Velocity'}
               >
                 ≋
               </button>
