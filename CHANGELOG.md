@@ -1,11 +1,42 @@
 # Changelog
 
-## 0.3.1
+## 0.4.0
 
-- Display version number in header, bottom-aligned next to the Stream logo
+Consolidates 0.3.0 and 0.3.1 into a single release to align app and landing page versioning.
+
+### Settings panel
+- Collapsible sections: Add feeds, Display, Velocity (with separators)
+- **Text size** control (small, default, large)
+- **Highlight colour** picker: Frost, Yellow, Green, Berry (Nord palette)
+- **Fade intensity** control (none, subtle, full)
 - Settings footer with product page link and AGPL-3.0 licence (GitHub logo)
-- Fix header logo shifting when toggling between stream and settings views
-- Enable `resolveJsonModule` in tsconfig for package.json version import
+- All display preferences persist to localStorage
+
+### Header
+- Version number displayed next to the Stream logo (from package.json)
+- Stable layout: no logo shift between stream and settings views
+
+### Accessibility
+- WCAG AA contrast for accent colours on light theme
+- `aria-pressed` on all category filter buttons
+- `focus-visible` outline on ConnectScreen form inputs
+- `<main>` landmark wrapping page content
+- Focus trapping in ReadingView and KeyboardHelp dialogs
+- Scoped `kbd` styles
+
+### Security and performance
+- HTML sanitiser strips `javascript:` protocol from href/src/action
+- Article body images use `loading="lazy"`
+
+### Code quality
+- Renamed VelocitySettings to Settings (component, files, interface)
+- Extracted shared `displayPrefs.ts` module
+- Removed unused `articleTitle` prop from UndoToast
+- Fade intensity driven by `--fade-max` CSS custom property
+
+### Landing page (gh-pages)
+- Social media preview image (1200x630, Nord dark theme)
+- Open Graph and Twitter Card meta tags
 
 ## 0.3.0
 
