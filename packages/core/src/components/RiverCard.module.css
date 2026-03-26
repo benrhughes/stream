@@ -10,8 +10,8 @@
   margin-bottom: 2px;
   border-radius: var(--radius);
 
-  /* Aging signal 1: opacity */
-  opacity: calc(1.0 - 0.7 * var(--card-age, 0));
+  /* Aging signal 1: opacity — --fade-max controls intensity (0 = none, 0.7 = full) */
+  opacity: calc(1.0 - var(--fade-max, 0.7) * var(--card-age, 0));
 
   /* Aging signal 2: left border — thick + saturated when fresh */
   border-left: solid var(--accent-new);

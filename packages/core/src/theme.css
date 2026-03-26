@@ -51,6 +51,18 @@
   --shadow:       rgba(0, 0, 0, 0.3);
 }
 
+/* Accent colour overrides (Nord palette)
+   "frost" is the default — uses the theme's built-in blue, no override needed.
+   Light theme uses darkened Aurora variants for WCAG AA contrast on #ECEFF4.
+   Dark theme uses the standard Aurora values. */
+[data-accent="yellow"] { --accent-new: #B8963A; }  /* darkened nord13 for light bg */
+[data-accent="green"]  { --accent-new: #6B8F4E; }  /* darkened nord14 for light bg */
+[data-accent="berry"]  { --accent-new: #935B88; }  /* darkened nord15 for light bg */
+
+[data-theme="ink"][data-accent="yellow"] { --accent-new: #EBCB8B; }  /* nord13 */
+[data-theme="ink"][data-accent="green"]  { --accent-new: #A3BE8C; }  /* nord14 */
+[data-theme="ink"][data-accent="berry"]  { --accent-new: #B48EAD; }  /* nord15 */
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --transition: 0ms;

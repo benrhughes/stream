@@ -1,4 +1,4 @@
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import type { Article, Source } from '../types.js';
 import { useRelativeTime } from '../hooks/useRelativeTime.js';
 import styles from './ReadingView.module.css';
@@ -9,8 +9,12 @@ function sanitiseHtml(html: string): string {
   doc.querySelectorAll('*').forEach(el => {
     for (const attr of [...el.attributes]) {
       if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+      if (['href', 'src', 'action'].includes(attr.name) && /^\s*javascript:/i.test(attr.value)) {
+        el.removeAttribute(attr.name);
+      }
     }
   });
+  doc.querySelectorAll('img').forEach(img => img.setAttribute('loading', 'lazy'));
   return doc.body.innerHTML;
 }
 
@@ -24,13 +28,27 @@ interface ReadingViewProps {
 
 export function ReadingView({ article, source, isSaved, onSave, onClose }: ReadingViewProps) {
   const relTime = useRelativeTime(article.publishedAt);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape
+  // Close on Escape + focus trap
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+      if (e.key === 'Tab' && overlayRef.current) {
+        const focusable = overlayRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     };
     window.addEventListener('keydown', handler);
+    // Auto-focus first focusable element
+    const first = overlayRef.current?.querySelector<HTMLElement>('button, [href]');
+    first?.focus();
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
@@ -41,7 +59,7 @@ export function ReadingView({ article, source, isSaved, onSave, onClose }: Readi
   const safe = sanitiseHtml(article.content);
 
   return (
-    <div class={styles.overlay} role="dialog" aria-modal="true" aria-label={article.title}>
+    <div ref={overlayRef} class={styles.overlay} role="dialog" aria-modal="true" aria-label={article.title}>
       <div class={styles.inner}>
         <div class={styles.toolbar}>
           <button class={styles.backBtn} onClick={onClose} aria-label="Back to stream">

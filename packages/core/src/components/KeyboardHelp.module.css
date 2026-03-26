@@ -95,7 +95,7 @@
   margin: 0;
 }
 
-kbd {
+.list kbd {
   display: inline-block;
   font-family: var(--font-sans);
   font-size: 0.75rem;

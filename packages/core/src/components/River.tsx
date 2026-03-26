@@ -72,10 +72,7 @@ export function River({
       })}
 
       {pendingUndo && (
-        <UndoToast
-          articleTitle={pendingUndo.article.title}
-          onUndo={onUndo}
-        />
+        <UndoToast onUndo={onUndo} />
       )}
     </div>
   );

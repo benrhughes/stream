@@ -85,8 +85,8 @@ export function AppShell({
               <button
                 class={`${styles.themeBtn} ${inSettings ? styles.active : ''}`}
                 onClick={onSettings}
-                aria-label={inSettings ? 'Back to stream' : 'Velocity settings'}
-                title={inSettings ? 'Back to stream' : 'Velocity'}
+                aria-label={inSettings ? 'Back to stream' : 'Settings'}
+                title={inSettings ? 'Back to stream' : 'Settings'}
               >
                 ≋
               </button>
@@ -102,7 +102,7 @@ export function AppShell({
           </div>
         </div>
       </header>
-      {children}
+      <main>{children}</main>
     </>
   );
 }

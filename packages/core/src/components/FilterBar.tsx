@@ -29,6 +29,7 @@ export function FilterBar({
           <button
             class={`${styles.pill} ${activeCategory === null ? styles.active : ''}`}
             onClick={() => onCategory(null)}
+            aria-pressed={activeCategory === null}
           >
             All
           </button>
@@ -37,6 +38,7 @@ export function FilterBar({
               key={cat.id}
               class={`${styles.pill} ${activeCategory === cat.id ? styles.active : ''}`}
               onClick={() => onCategory(activeCategory === cat.id ? null : cat.id)}
+              aria-pressed={activeCategory === cat.id}
             >
               {cat.title}
             </button>

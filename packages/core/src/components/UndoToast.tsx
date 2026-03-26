@@ -1,11 +1,10 @@
 import styles from './UndoToast.module.css';
 
 interface UndoToastProps {
-  articleTitle: string;
   onUndo: () => void;
 }
 
-export function UndoToast({ articleTitle: _title, onUndo }: UndoToastProps) {
+export function UndoToast({ onUndo }: UndoToastProps) {
   return (
     <div class={styles.toast} role="status" aria-live="polite">
       <span class={styles.message}>Article released</span>

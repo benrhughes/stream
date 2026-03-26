@@ -98,11 +98,15 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   transition: border-color var(--transition);
-  outline: none;
 }
 
 .input:focus {
   border-color: var(--accent-new);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent-new);
+  outline-offset: 1px;
 }
 
 .hint {

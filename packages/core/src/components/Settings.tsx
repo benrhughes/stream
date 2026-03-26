@@ -1,7 +1,12 @@
-import { useState, useRef } from 'preact/hooks';
+import { useState, useRef, useEffect } from 'preact/hooks';
 import type { Category, Source, StreamAdapter } from '../types.js';
 import { HALF_LIVES } from '../riverEngine.js';
-import styles from './VelocitySettings.module.css';
+import {
+  loadDisplayPrefs, saveDisplayPrefs, applyDisplayPrefs,
+  ACCENT_OPTIONS,
+  type TextSize, type FadeLevel, type DisplayPrefs,
+} from '../displayPrefs.js';
+import styles from './Settings.module.css';
 
 const TIERS: Array<{ tier: 1|2|3|4|5; label: string }> = [
   { tier: 1, label: `${HALF_LIVES[1]}h` },
@@ -13,7 +18,7 @@ const TIERS: Array<{ tier: 1|2|3|4|5; label: string }> = [
 
 type AsyncStatus = { type: 'idle' } | { type: 'loading' } | { type: 'ok'; message: string } | { type: 'error'; message: string };
 
-interface VelocitySettingsProps {
+interface SettingsProps {
   sources: Source[];
   categories?: Category[];
   adapter?: StreamAdapter;
@@ -22,12 +27,17 @@ interface VelocitySettingsProps {
   onImported?: () => void;
 }
 
-export function VelocitySettings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported }: VelocitySettingsProps) {
+export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported }: SettingsProps) {
   const [query, setQuery]             = useState('');
   const [importStatus, setImportStatus] = useState<AsyncStatus>({ type: 'idle' });
   const [addStatus, setAddStatus]     = useState<AsyncStatus>({ type: 'idle' });
   const [feedUrl, setFeedUrl]         = useState('');
+  const [display, setDisplay]         = useState<DisplayPrefs>(loadDisplayPrefs);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    applyDisplayPrefs(display);
+  }, [display]);
 
   const handleFileChange = async (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0];
@@ -72,9 +82,34 @@ export function VelocitySettings({ sources, categories, adapter, onUpdate, onCat
 
   return (
     <div class={styles.wrap}>
-      <div class={styles.headingRow}>
-        <h2 class={styles.heading}>Velocity</h2>
-        {adapter && (
+      <h2 class={styles.heading}>Settings</h2>
+
+      {adapter && (
+        <details class={styles.section} open>
+          <summary class={styles.sectionHeading}>Add feeds</summary>
+
+          <form class={styles.addForm} onSubmit={handleAddFeed}>
+            <input
+              class={styles.addInput}
+              type="url"
+              placeholder="https://example.com/feed.xml"
+              value={feedUrl}
+              onInput={e => setFeedUrl((e.target as HTMLInputElement).value)}
+              aria-label="Feed URL"
+              spellcheck={false}
+              autocomplete="off"
+            />
+            <button
+              class={styles.importBtn}
+              type="submit"
+              disabled={addStatus.type === 'loading' || !feedUrl.trim()}
+            >
+              {addStatus.type === 'loading' ? 'Adding…' : 'Add feed'}
+            </button>
+            {addStatus.type === 'ok'    && <span class={styles.importOk}>{addStatus.message}</span>}
+            {addStatus.type === 'error' && <span class={styles.importErr}>{addStatus.message}</span>}
+          </form>
+
           <div class={styles.importWrap}>
             <input
               ref={fileRef}
@@ -98,39 +133,66 @@ export function VelocitySettings({ sources, categories, adapter, onUpdate, onCat
               <span class={styles.importErr}>{importStatus.message}</span>
             )}
           </div>
-        )}
-      </div>
-      <p class={styles.sub}>
-        How quickly should each source's articles fade? Shorter = faster.
-      </p>
-
-      {adapter && (
-        <form class={styles.addForm} onSubmit={handleAddFeed}>
-          <input
-            class={styles.addInput}
-            type="url"
-            placeholder="https://example.com/feed.xml"
-            value={feedUrl}
-            onInput={e => setFeedUrl((e.target as HTMLInputElement).value)}
-            aria-label="Feed URL"
-            spellcheck={false}
-            autocomplete="off"
-          />
-          <button
-            class={styles.importBtn}
-            type="submit"
-            disabled={addStatus.type === 'loading' || !feedUrl.trim()}
-          >
-            {addStatus.type === 'loading' ? 'Adding…' : 'Add feed'}
-          </button>
-          {addStatus.type === 'ok'    && <span class={styles.importOk}>{addStatus.message}</span>}
-          {addStatus.type === 'error' && <span class={styles.importErr}>{addStatus.message}</span>}
-        </form>
+        </details>
       )}
+
+      <details class={styles.section} open>
+        <summary class={styles.sectionHeading}>Display</summary>
+        <div class={styles.displayGrid}>
+          <span class={styles.displayLabel}>Text size</span>
+          <div class={styles.tiers} role="group" aria-label="Text size">
+            {(['small', 'default', 'large'] as TextSize[]).map(size => (
+              <button
+                key={size}
+                class={`${styles.tierBtn} ${display.textSize === size ? styles.active : ''}`}
+                onClick={() => { const next = { ...display, textSize: size }; setDisplay(next); saveDisplayPrefs(next); }}
+                aria-pressed={display.textSize === size}
+              >
+                {size.charAt(0).toUpperCase() + size.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <span class={styles.displayLabel}>Highlight</span>
+          <div class={styles.swatches} role="group" aria-label="Highlight colour">
+            {ACCENT_OPTIONS.map(({ id, label, swatch }) => (
+              <button
+                key={id}
+                class={`${styles.swatchBtn} ${display.accentColor === id ? styles.swatchActive : ''}`}
+                onClick={() => { const next = { ...display, accentColor: id }; setDisplay(next); saveDisplayPrefs(next); }}
+                aria-pressed={display.accentColor === id}
+                aria-label={label}
+                title={label}
+                style={{ ['--swatch' as string]: swatch } as never}
+              />
+            ))}
+          </div>
+
+          <span class={styles.displayLabel}>Fade intensity</span>
+          <div class={styles.tiers} role="group" aria-label="Fade intensity">
+            {(['none', 'subtle', 'full'] as FadeLevel[]).map(level => (
+              <button
+                key={level}
+                class={`${styles.tierBtn} ${display.fadeLevel === level ? styles.active : ''}`}
+                onClick={() => { const next = { ...display, fadeLevel: level }; setDisplay(next); saveDisplayPrefs(next); }}
+                aria-pressed={display.fadeLevel === level}
+              >
+                {level.charAt(0).toUpperCase() + level.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </details>
+
+      <details class={styles.section} open>
+        <summary class={styles.sectionHeading}>Velocity</summary>
+        <p class={styles.sub}>
+          How quickly should each source's articles fade? Shorter = faster.
+        </p>
 
       {categories && categories.length > 0 && (
         <>
-          <h3 class={styles.sectionHeading}>Categories</h3>
+          <h3 class={styles.subHeading}>Categories</h3>
           <div class={styles.list} role="list">
             {categories.map(cat => (
               <CategoryRow
@@ -141,7 +203,7 @@ export function VelocitySettings({ sources, categories, adapter, onUpdate, onCat
               />
             ))}
           </div>
-          <h3 class={styles.sectionHeading}>Sources</h3>
+          <h3 class={styles.subHeading}>Sources</h3>
         </>
       )}
 
@@ -169,6 +231,7 @@ export function VelocitySettings({ sources, categories, adapter, onUpdate, onCat
           ))}
         </div>
       )}
+      </details>
     </div>
   );
 }

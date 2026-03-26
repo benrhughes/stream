@@ -5,12 +5,13 @@ import { useTheme } from './hooks/useTheme.js';
 import { River } from './components/River.js';
 import { AppShell } from './components/AppShell.js';
 import { ConnectScreen } from './components/ConnectScreen.js';
-import { VelocitySettings } from './components/VelocitySettings.js';
+import { Settings } from './components/Settings.js';
 import { ReadingView } from './components/ReadingView.js';
 import { KeyboardHelp } from './components/KeyboardHelp.js';
 import { FilterBar } from './components/FilterBar.js';
 import { FreshRSSAdapter } from './adapters/freshrss.js';
 import { FeedbinAdapter } from './adapters/feedbin.js';
+import { loadDisplayPrefs, applyDisplayPrefs } from './displayPrefs.js';
 import type { Article, Category, Source, StreamAdapter, AdapterConfig } from './types.js';
 import './theme.css';
 
@@ -116,6 +117,11 @@ export function App() {
   );
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
+  // Apply saved display prefs on mount (text size, fade intensity, accent colour)
+  useEffect(() => {
+    applyDisplayPrefs(loadDisplayPrefs());
+  }, []);
 
   // Live score recalculation every 60s
   useEffect(() => {
@@ -291,7 +297,7 @@ export function App() {
               hidden={inSettings}
             />
             {inSettings && (
-              <VelocitySettings
+              <Settings
                 sources={state.sources}
                 categories={state.categories}
                 adapter={state.adapter}
