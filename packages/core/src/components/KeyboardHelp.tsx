@@ -5,6 +5,7 @@ const SHORTCUTS = [
   { key: 'j / k',       desc: 'Navigate down / up' },
   { key: 'Enter / o',   desc: 'Open article' },
   { key: 'b',           desc: 'Open in browser (new tab)' },
+  { key: 'c',           desc: 'Copy link / share' },
   { key: 'd',           desc: 'Dismiss article' },
   { key: 's',           desc: 'Save / star' },
   { key: 'z',           desc: 'Undo dismiss' },

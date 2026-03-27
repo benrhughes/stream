@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Article, Source } from '../types.js';
 import { useRelativeTime } from '../hooks/useRelativeTime.js';
 import styles from './ReadingView.module.css';
@@ -29,6 +29,17 @@ interface ReadingViewProps {
 export function ReadingView({ article, source, isSaved, onSave, onClose }: ReadingViewProps) {
   const relTime = useRelativeTime(article.publishedAt);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      await navigator.share({ url: article.url, title: article.title }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(article.url).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
 
   const readingMins = (() => {
     const words = article.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
@@ -72,6 +83,14 @@ export function ReadingView({ article, source, isSaved, onSave, onClose }: Readi
             ← Stream
           </button>
           <div class={styles.toolbarRight}>
+            <button
+              class={`${styles.shareBtn} ${copied ? styles.shareBtnActive : ''}`}
+              onClick={handleShare}
+              aria-label={copied ? 'Link copied' : 'Share article'}
+              title={copied ? 'Copied!' : 'Share'}
+            >
+              {copied ? '✓ Copied' : '↑ Share'}
+            </button>
             {onSave && (
               <button
                 class={`${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}

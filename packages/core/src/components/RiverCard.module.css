@@ -147,6 +147,14 @@
   background: var(--border);
 }
 
+.shareBtn:hover {
+  color: var(--text);
+}
+
+.shareBtnActive {
+  color: var(--accent-new);
+}
+
 .saveBtn:hover {
   color: var(--accent-saved);
 }

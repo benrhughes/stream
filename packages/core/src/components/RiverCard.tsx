@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import type { ScoredArticle } from '../riverEngine.js';
 import type { Source } from '../types.js';
 import { useRelativeTime } from '../hooks/useRelativeTime.js';
@@ -52,9 +53,20 @@ export function RiverCard({
   const cardAge = scoreToAge(scored.score);
   const preview = makePreview(article.content);
   const mins = readingMins(article.content);
+  const [copied, setCopied] = useState(false);
 
   const handleFaviconError = (e: Event) => {
     (e.target as HTMLImageElement).setAttribute('data-error', '');
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      await navigator.share({ url: article.url, title: article.title }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(article.url).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
   };
 
   return (
@@ -98,6 +110,14 @@ export function RiverCard({
         )}
 
         <div class={styles.actions}>
+          <button
+            class={`${styles.actionBtn} ${styles.shareBtn} ${copied ? styles.shareBtnActive : ''}`}
+            onClick={handleShare}
+            aria-label={copied ? 'Link copied' : 'Share article'}
+            title={copied ? 'Copied!' : 'Share'}
+          >
+            {copied ? '✓' : '↑'}
+          </button>
           <button
             class={`${styles.actionBtn} ${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}
             onClick={() => onSave(article.id)}

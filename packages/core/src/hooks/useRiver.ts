@@ -148,6 +148,17 @@ export function useRiver(
             window.open(cur[fi].article.url, '_blank', 'noopener,noreferrer');
           }
           break;
+        case 'c':
+          if (fi >= 0 && fi < cur.length) {
+            e.preventDefault();
+            const { url, title } = cur[fi].article;
+            if (navigator.share) {
+              navigator.share({ url, title }).catch(() => {});
+            } else {
+              navigator.clipboard.writeText(url).catch(() => {});
+            }
+          }
+          break;
       }
     };
 
