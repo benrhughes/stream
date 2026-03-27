@@ -241,7 +241,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
       <details class={styles.section} open>
         <summary class={styles.sectionHeading}>Velocity</summary>
         <p class={styles.sub}>
-          How quickly should each source's articles fade? Shorter = faster.
+          Shorter half-lives push older articles down faster.
         </p>
 
         {suggestions && suggestions.length > 0 && (

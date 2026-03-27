@@ -6,21 +6,22 @@
 
 .heading {
   font-family: var(--font-serif);
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: var(--text);
-  margin: 0 0 1rem;
+  margin: 0 0 2rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border);
+  letter-spacing: -0.01em;
 }
 
-/* Collapsible sections */
+/* Collapsible sections — top border stacks cleanly, no double-borders */
 .section {
-  margin-bottom: 1.25rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 
-.section[open] > .sectionHeading {
-  margin-bottom: 0.75rem;
+.section[open] {
+  padding-bottom: 1.75rem;
 }
 
 /* OPML import */
@@ -70,9 +71,10 @@
 
 .sub {
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  font-style: italic;
   color: var(--text-muted);
-  margin: 0 0 1rem;
+  margin: 0 0 1.5rem;
 }
 
 /* Add feed form */
@@ -111,11 +113,17 @@
 .search {
   display: block;
   width: 100%;
-  padding: 0.5rem 0.625rem;
+  padding: 0.5rem 0.625rem 0.5rem 2.125rem;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--text);
   background: var(--bg);
+  /* Inline SVG magnifier — colour matches --text-muted (#4C566A) */
+  /* SVG icon using currentColor-equivalent neutral; will be overridden for ink theme */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%234C566A' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.625rem center;
+  background-size: 14px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   outline: none;
@@ -125,6 +133,11 @@
 
 .search:focus {
   border-color: var(--accent-new);
+}
+
+.search::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 /* Source rows */
@@ -318,35 +331,76 @@
 }
 
 .sectionHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: 0.625rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  color: var(--text);
   cursor: pointer;
-  padding: 0.375rem 0;
   list-style: none;
+  user-select: none;
+  transition: color var(--transition);
 }
 
 .sectionHeading::-webkit-details-marker {
   display: none;
 }
 
+/* Remove old prefix arrow */
 .sectionHeading::before {
-  content: '▸ ';
+  content: none;
 }
 
 details[open] > .sectionHeading::before {
-  content: '▾ ';
+  content: none;
 }
 
-/* Display settings grid */
+/* + / − toggle on the right */
+.sectionHeading::after {
+  content: '+';
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: 1rem;
+  transition: color var(--transition);
+}
+
+details[open] > .sectionHeading::after {
+  content: '−';
+}
+
+.sectionHeading:hover {
+  color: var(--accent-new);
+}
+
+.sectionHeading:hover::after {
+  color: var(--accent-new);
+}
+
+/* Display settings grid — row separators via padding + border on each cell */
 .displayGrid {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 1.25rem 1rem;
+  gap: 0 1.25rem;
   align-items: center;
+}
+
+.displayGrid > * {
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Last two children (label + control of final row) get no bottom border */
+.displayGrid > *:nth-last-child(-n+2) {
+  border-bottom: none;
 }
 
 /* Colour swatch buttons */
@@ -384,12 +438,14 @@ details[open] > .sectionHeading::before {
 
 .subHeading {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
+  font-size: 0.5625rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
   color: var(--text-muted);
-  margin: 1.25rem 0 0.375rem;
+  margin: 2rem 0 0.75rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .catIcon {
@@ -613,6 +669,11 @@ details[open] > .sectionHeading::before {
 }
 
 .suggestionDismiss:hover { color: var(--text); }
+
+/* Dark theme: search icon uses lighter stroke to match --text-muted (#D8DEE9) */
+[data-theme="ink"] .search {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23D8DEE9' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+}
 
 /* Export & import */
 .dataActions {
