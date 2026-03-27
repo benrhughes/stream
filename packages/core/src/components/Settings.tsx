@@ -463,19 +463,11 @@ function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRow
         </select>
       )}
 
-      <div class={styles.tiers} role="group" aria-label={`Velocity for ${source.title}`}>
-        {TIERS.map(({ tier, label }) => (
-          <button
-            key={tier}
-            class={`${styles.tierBtn} ${source.velocityTier === tier ? styles.active : ''}`}
-            onClick={() => onUpdate(source.id, tier)}
-            aria-pressed={source.velocityTier === tier}
-            title={tierTitle(tier)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <VelocitySlider
+        tier={source.velocityTier}
+        label={`Velocity for ${source.title}`}
+        onChange={(t) => onUpdate(source.id, t)}
+      />
     </div>
   );
 }
@@ -483,6 +475,42 @@ function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRow
 function tierTitle(tier: 1|2|3|4|5): string {
   const names = ['Breaking', 'News', 'Article', 'Essay', 'Evergreen'];
   return names[tier - 1];
+}
+
+interface VelocitySliderProps {
+  tier: 1|2|3|4|5 | null;
+  label: string;
+  onChange: (tier: 1|2|3|4|5) => void;
+}
+
+function VelocitySlider({ tier, label, onChange }: VelocitySliderProps) {
+  const isMixed = tier === null;
+  const value = tier ?? 3;
+  return (
+    <div
+      class={`${styles.slider} ${isMixed ? styles.sliderMixed : ''}`}
+      role="group"
+      aria-label={label}
+    >
+      <span class={styles.sliderEndpoint}>6 hours</span>
+      <div class={styles.sliderTrack}>
+        <input
+          type="range"
+          min={1}
+          max={5}
+          step={1}
+          value={value}
+          onInput={(e) => onChange(Number((e.target as HTMLInputElement).value) as 1|2|3|4|5)}
+          aria-label="Velocity"
+          aria-valuetext={isMixed ? 'Mixed' : `${tierTitle(value as 1|2|3|4|5)} — ${TIERS[value - 1].label}`}
+        />
+        <div class={styles.sliderTicks}>
+          {TIERS.map(({ tier: t, label: l }) => <span key={t}>{l}</span>)}
+        </div>
+      </div>
+      <span class={styles.sliderEndpoint}>1 week</span>
+    </div>
+  );
 }
 
 interface CategoryRowProps {
@@ -513,19 +541,11 @@ function CategoryRow({ category, sources, onUpdate }: CategoryRowProps) {
           <span class={styles.catCount}> · {catSources.length}</span>
         )}
       </span>
-      <div class={styles.tiers} role="group" aria-label={`Velocity for ${category.title}`}>
-        {TIERS.map(({ tier, label }) => (
-          <button
-            key={tier}
-            class={`${styles.tierBtn} ${sharedTier === tier ? styles.active : ''}`}
-            onClick={() => handleTier(tier)}
-            aria-pressed={sharedTier === tier}
-            title={tierTitle(tier)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <VelocitySlider
+        tier={sharedTier}
+        label={`Velocity for ${category.title}`}
+        onChange={handleTier}
+      />
     </div>
   );
 }
