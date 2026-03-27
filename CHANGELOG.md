@@ -4,7 +4,7 @@
 
 ### Accessibility and polish
 
-- **Velocity slider** — replaced discrete tier buttons (3h / 12h / 24h / 72h / 7d) with a draggable range slider. Endpoint labels "6 hours" / "1 week" are always visible; intermediate tick labels appear above the thumb on hover and hide at rest. Mixed-tier category rows show a dimmed thumb.
+- **Velocity slider** — replaced discrete tier buttons (3h / 12h / 24h / 72h / 7d) with a draggable range slider. Endpoint labels "6 hours" / "1 week" are always visible; intermediate tick labels (12h / 24h / 72h) appear above the thumb on hover and hide at rest, positioned at the visual quarter-points of the track. Mixed-tier category rows show a dimmed thumb.
 - **Touch targets** — action buttons on cards, header buttons, and filter bar pills all meet WCAG 2.5.5 minimum tap sizes (36–44px).
 - **Semantic HTML** — article preview text is now a `<button>` element, accessible to keyboard and screen reader users.
 - **Card age bar** — migrated from `border-left-width` animation (layout reflow) to a `::before` pseudo-element using `transform: scaleX` (compositor-only, no reflow).

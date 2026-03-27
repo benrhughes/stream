@@ -291,23 +291,29 @@
   bottom: 100%;
   left: 0;
   right: 0;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
+  margin-bottom: 26px;
   opacity: 0;
   transition: opacity var(--transition);
   pointer-events: none;
 }
 
 .sliderTicks span {
+  position: absolute;
+  transform: translateX(-50%);
   font-family: var(--font-sans);
   font-size: 0.5625rem;
   color: var(--text-muted);
-  text-align: center;
-  width: 0;
-  overflow: visible;
   white-space: nowrap;
 }
+
+/* Positions match visual quarter/half/three-quarter points of the track.
+   Center (50%) is always the exact thumb stop for pos 3.
+   12h (25%) and 72h (75%) are ~5px from their thumb stops — visually equidistant. */
+.sliderTicks span:nth-child(1) { left: 0%; }
+.sliderTicks span:nth-child(2) { left: 25%; }
+.sliderTicks span:nth-child(3) { left: 50%; }
+.sliderTicks span:nth-child(4) { left: 75%; }
+.sliderTicks span:nth-child(5) { left: 100%; }
 
 /* First (3h) and last (7d) are covered by endpoint labels — hide them */
 .sliderTicks span:first-child,
