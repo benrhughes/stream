@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Article, Source } from '../types.js';
 import { useRelativeTime } from '../hooks/useRelativeTime.js';
+import { getProgress, saveProgress, purgeProgress } from '../readingProgress.js';
 import styles from './ReadingView.module.css';
 
 function sanitiseHtml(html: string): string {
@@ -68,6 +69,37 @@ export function ReadingView({ article, source, isSaved, onSave, onClose }: Readi
     first?.focus();
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  // Restore saved scroll position, then save on scroll (debounced)
+  useEffect(() => {
+    purgeProgress();
+    const el = overlayRef.current;
+    if (!el) return;
+
+    const saved = getProgress(article.id);
+    if (saved !== null && saved > 0) {
+      // Defer until content has painted
+      const raf = requestAnimationFrame(() => {
+        el.scrollTop = saved * (el.scrollHeight - el.clientHeight);
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [article.id]);
+
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const onScroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const max = el.scrollHeight - el.clientHeight;
+        if (max > 0) saveProgress(article.id, el.scrollTop / max);
+      }, 300);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => { el.removeEventListener('scroll', onScroll); clearTimeout(timer); };
+  }, [article.id]);
 
   const handleFaviconError = (e: Event) => {
     (e.target as HTMLImageElement).setAttribute('data-error', '');
