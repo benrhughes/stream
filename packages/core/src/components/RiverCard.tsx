@@ -109,7 +109,7 @@ export function RiverCard({
 
         {mins !== null && (
           <span class={styles.readingTime} aria-label={`${mins} minute read`}>
-            · {mins} min
+            · {mins} min read
           </span>
         )}
 
@@ -151,7 +151,15 @@ export function RiverCard({
                 aria-label={copied ? 'Link copied' : 'Share article'}
                 title={copied ? 'Copied!' : 'Share'}
               >
-                {copied ? '✓' : '↑'}
+                {copied ? '✓' : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="18" cy="5" r="3"/>
+                    <circle cx="6" cy="12" r="3"/>
+                    <circle cx="18" cy="19" r="3"/>
+                    <line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/>
+                    <line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>
+                  </svg>
+                )}
               </button>
               <button
                 class={`${styles.actionBtn} ${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}

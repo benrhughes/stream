@@ -115,6 +115,12 @@ export function AppShell({
           </div>
         </div>
       </header>
+      {paused && (
+        <div class={styles.pauseBanner}>
+          ⏸ River paused — articles are not fading
+          <button class={styles.pauseBannerBtn} onClick={onTogglePause}>Resume</button>
+        </div>
+      )}
       <main>{children}</main>
     </>
   );
