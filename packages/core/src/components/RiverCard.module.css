@@ -1,3 +1,32 @@
+@keyframes cardFlash {
+  0%   { background: color-mix(in oklch, var(--accent-new), var(--surface) 80%); }
+  100% { background: var(--surface); }
+}
+
+.cardCopied {
+  animation: cardFlash 1.5s ease forwards;
+}
+
+.copiedBanner {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-new);
+  margin-bottom: 0.25rem;
+  animation: fadeOut 1.5s ease forwards;
+}
+
+@keyframes fadeOut {
+  0%   { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardCopied { animation: none; background: color-mix(in oklch, var(--accent-new), var(--surface) 80%); }
+  .copiedBanner { animation: none; }
+}
+
 /* --card-age: 0.0 = fresh (score 1.0), 1.0 = near-threshold (score ~0.05)
    Two aging signals: opacity + left border (width + colour desaturation)
    Opacity floor 0.3 — text remains readable even for oldest visible cards.

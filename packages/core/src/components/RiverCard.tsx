@@ -33,6 +33,7 @@ interface RiverCardProps {
   source: Source;
   isFocused: boolean;
   isSaved: boolean;
+  isCopied?: boolean;
   onDismiss: (id: string) => void;
   onSave: (id: string) => void;
   onOpen: (id: string) => void;
@@ -45,6 +46,7 @@ export function RiverCard({
   source,
   isFocused,
   isSaved,
+  isCopied = false,
   onDismiss,
   onSave,
   onOpen,
@@ -73,14 +75,19 @@ export function RiverCard({
     }
   };
 
+  const showCopied = isCopied || copied;
+
   return (
     <article
       ref={cardRef}
-      class={styles.card}
+      class={`${styles.card} ${showCopied ? styles.cardCopied : ''}`}
       style={{ ['--card-age' as string]: cardAge.toFixed(3) } as never}
       aria-current={isFocused ? 'true' : undefined}
       aria-label={article.title}
     >
+      {showCopied && (
+        <div class={styles.copiedBanner} aria-live="polite">✓ Link copied</div>
+      )}
       <div class={styles.header}>
         <div class={styles.faviconWrap}>
           {source.faviconUrl ? (

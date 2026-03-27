@@ -20,6 +20,7 @@ export interface RiverHook {
   save: (id: string) => void;
   undo: () => void;
   openItem: (id: string) => void;
+  shareItem: (id: string) => void;
 }
 
 export function useRiver(
@@ -27,6 +28,7 @@ export function useRiver(
   onOpen?: (article: Article) => void,
   onSave?: (article: Article) => Promise<void>,
   onRead?: (article: Article) => Promise<void>,
+  onShare?: (article: Article) => void,
 ): RiverHook {
   const [items, setItems] = useState<ScoredArticle[]>(initialItems);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -98,6 +100,12 @@ export function useRiver(
     if (found && onOpen) onOpen(found.article);
   }, [onOpen]);
 
+  const shareItem = useCallback((id: string) => {
+    const { items: cur } = stateRef.current;
+    const found = cur.find(s => s.article.id === id);
+    if (found && onShare) onShare(found.article);
+  }, [onShare]);
+
   // Keyboard navigation — single stable listener via stale-ref pattern
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -151,12 +159,7 @@ export function useRiver(
         case 'c':
           if (fi >= 0 && fi < cur.length) {
             e.preventDefault();
-            const { url, title } = cur[fi].article;
-            if (navigator.share) {
-              navigator.share({ url, title }).catch(() => {});
-            } else {
-              navigator.clipboard.writeText(url).catch(() => {});
-            }
+            shareItem(cur[fi].article.id);
           }
           break;
       }
@@ -164,7 +167,7 @@ export function useRiver(
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [dismiss, save, undo, onOpen]);
+  }, [dismiss, save, undo, onOpen, shareItem]);
 
-  return { items, focusedIndex, pendingUndo: pendingUndo ? { article: pendingUndo.scored.article } : null, dismiss, save, undo, openItem };
+  return { items, focusedIndex, pendingUndo: pendingUndo ? { article: pendingUndo.scored.article } : null, dismiss, save, undo, openItem, shareItem };
 }

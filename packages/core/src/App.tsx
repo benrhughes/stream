@@ -500,7 +500,22 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
     [adapter],
   );
 
-  const river = useRiver(scoredItems, handleOpen, handleSave, handleRead);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleShare = useCallback((article: Article) => {
+    const doCopy = () => {
+      navigator.clipboard.writeText(article.url).catch(() => {});
+      setCopiedId(article.id);
+      setTimeout(() => setCopiedId(null), 1500);
+    };
+    if (navigator.share) {
+      navigator.share({ url: article.url, title: article.title }).catch(() => doCopy());
+    } else {
+      doCopy();
+    }
+  }, []);
+
+  const river = useRiver(scoredItems, handleOpen, handleSave, handleRead, handleShare);
 
   const savedIds = new Set(
     articles
@@ -528,6 +543,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
         savedIds={savedIds}
         pendingUndo={river.pendingUndo}
         emptyMessage={emptyMessage}
+        copiedId={copiedId}
         onDismiss={river.dismiss}
         onSave={river.save}
         onOpen={river.openItem}

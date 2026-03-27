@@ -12,6 +12,7 @@ interface RiverProps {
   savedIds: Set<string>;
   pendingUndo: { article: Article } | null;
   emptyMessage?: string;
+  copiedId?: string | null;
   onDismiss: (id: string) => void;
   onSave: (id: string) => void;
   onOpen: (id: string) => void;
@@ -26,6 +27,7 @@ export function River({
   savedIds,
   pendingUndo,
   emptyMessage = 'The stream is quiet.',
+  copiedId,
   onDismiss,
   onSave,
   onOpen,
@@ -65,6 +67,7 @@ export function River({
             source={source}
             isFocused={index === focusedIndex}
             isSaved={savedIds.has(scored.article.id)}
+            isCopied={copiedId === scored.article.id}
             onDismiss={onDismiss}
             onSave={onSave}
             onOpen={onOpen}
