@@ -93,11 +93,14 @@
 }
 
 .spinning {
-  animation: spin 1s linear infinite;
+  display: inline-block;
+  animation: spin 1.5s linear infinite;
+  transform-origin: center;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -85,13 +85,13 @@ export function AppShell({
             )}
             {onRefresh && (
               <button
-                class={`${styles.themeBtn} ${refreshing ? styles.spinning : ''}`}
+                class={styles.themeBtn}
                 onClick={onRefresh}
                 disabled={refreshing}
                 aria-label="Refresh articles"
                 title="Refresh"
               >
-                ↻
+                <span class={refreshing ? styles.spinning : undefined}>↻</span>
               </button>
             )}
             {onSettings && (
