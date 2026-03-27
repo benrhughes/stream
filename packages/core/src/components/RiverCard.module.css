@@ -147,6 +147,36 @@
   background: var(--border);
 }
 
+.muteBtn:hover {
+  color: var(--text);
+}
+
+/* Mute duration picker — shown inline in place of normal actions */
+.muteMenu {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.muteLabel {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: 0.125rem;
+}
+
+.muteDurationBtn {
+  font-size: 0.6875rem;
+  padding: 0 0.375rem;
+  height: 26px;
+  white-space: nowrap;
+}
+
+.muteDurationBtn:hover {
+  color: var(--text);
+}
+
 .shareBtn:hover {
   color: var(--text);
 }

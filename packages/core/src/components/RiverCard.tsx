@@ -3,6 +3,7 @@ import type { ScoredArticle } from '../riverEngine.js';
 import type { Source } from '../types.js';
 import { useRelativeTime } from '../hooks/useRelativeTime.js';
 import { VISIBILITY_THRESHOLD } from '../riverEngine.js';
+import { MUTE_DURATIONS } from '../mutedSources.js';
 import styles from './RiverCard.module.css';
 
 function stripHtml(html: string): string {
@@ -35,6 +36,7 @@ interface RiverCardProps {
   onDismiss: (id: string) => void;
   onSave: (id: string) => void;
   onOpen: (id: string) => void;
+  onMute: (sourceId: string, mutedUntil: number) => void;
   cardRef?: (el: HTMLElement | null) => void;
 }
 
@@ -46,6 +48,7 @@ export function RiverCard({
   onDismiss,
   onSave,
   onOpen,
+  onMute,
   cardRef,
 }: RiverCardProps) {
   const { article } = scored;
@@ -54,6 +57,7 @@ export function RiverCard({
   const preview = makePreview(article.content);
   const mins = readingMins(article.content);
   const [copied, setCopied] = useState(false);
+  const [showMuteMenu, setShowMuteMenu] = useState(false);
 
   const handleFaviconError = (e: Event) => {
     (e.target as HTMLImageElement).setAttribute('data-error', '');
@@ -110,31 +114,64 @@ export function RiverCard({
         )}
 
         <div class={styles.actions}>
-          <button
-            class={`${styles.actionBtn} ${styles.shareBtn} ${copied ? styles.shareBtnActive : ''}`}
-            onClick={handleShare}
-            aria-label={copied ? 'Link copied' : 'Share article'}
-            title={copied ? 'Copied!' : 'Share'}
-          >
-            {copied ? '✓' : '↑'}
-          </button>
-          <button
-            class={`${styles.actionBtn} ${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}
-            onClick={() => onSave(article.id)}
-            aria-label={isSaved ? 'Saved' : 'Save to Read Later'}
-            title={isSaved ? 'Saved' : 'Save'}
-            aria-pressed={isSaved}
-          >
-            {isSaved ? '\u2665' : '\u2661'}
-          </button>
-          <button
-            class={`${styles.actionBtn} ${styles.dismissBtn}`}
-            onClick={() => onDismiss(article.id)}
-            aria-label="Dismiss article"
-            title="Dismiss"
-          >
-            &times;
-          </button>
+          {showMuteMenu ? (
+            <div class={styles.muteMenu}>
+              <span class={styles.muteLabel}>Mute source:</span>
+              {MUTE_DURATIONS.map(({ label, ms }) => (
+                <button
+                  key={label}
+                  class={`${styles.actionBtn} ${styles.muteDurationBtn}`}
+                  onClick={() => { onMute(article.sourceId, Date.now() + ms); setShowMuteMenu(false); }}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                class={`${styles.actionBtn} ${styles.dismissBtn}`}
+                onClick={() => setShowMuteMenu(false)}
+                aria-label="Cancel mute"
+                title="Cancel"
+              >
+                &times;
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                class={`${styles.actionBtn} ${styles.muteBtn}`}
+                onClick={() => setShowMuteMenu(true)}
+                aria-label="Mute source"
+                title="Mute source"
+              >
+                ⊘
+              </button>
+              <button
+                class={`${styles.actionBtn} ${styles.shareBtn} ${copied ? styles.shareBtnActive : ''}`}
+                onClick={handleShare}
+                aria-label={copied ? 'Link copied' : 'Share article'}
+                title={copied ? 'Copied!' : 'Share'}
+              >
+                {copied ? '✓' : '↑'}
+              </button>
+              <button
+                class={`${styles.actionBtn} ${styles.saveBtn} ${isSaved ? styles.saveBtnActive : ''}`}
+                onClick={() => onSave(article.id)}
+                aria-label={isSaved ? 'Saved' : 'Save to Read Later'}
+                title={isSaved ? 'Saved' : 'Save'}
+                aria-pressed={isSaved}
+              >
+                {isSaved ? '\u2665' : '\u2661'}
+              </button>
+              <button
+                class={`${styles.actionBtn} ${styles.dismissBtn}`}
+                onClick={() => onDismiss(article.id)}
+                aria-label="Dismiss article"
+                title="Dismiss"
+              >
+                &times;
+              </button>
+            </>
+          )}
         </div>
       </div>
 

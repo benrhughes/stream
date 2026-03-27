@@ -16,6 +16,7 @@ interface RiverProps {
   onSave: (id: string) => void;
   onOpen: (id: string) => void;
   onUndo: () => void;
+  onMute: (sourceId: string, mutedUntil: number) => void;
 }
 
 export function River({
@@ -29,6 +30,7 @@ export function River({
   onSave,
   onOpen,
   onUndo,
+  onMute,
 }: RiverProps) {
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
 
@@ -66,6 +68,7 @@ export function River({
             onDismiss={onDismiss}
             onSave={onSave}
             onOpen={onOpen}
+            onMute={onMute}
             cardRef={el => { cardRefs.current[index] = el; }}
           />
         );

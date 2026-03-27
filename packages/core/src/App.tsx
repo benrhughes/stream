@@ -12,6 +12,7 @@ import { FilterBar } from './components/FilterBar.js';
 import { FreshRSSAdapter } from './adapters/freshrss.js';
 import { FeedbinAdapter } from './adapters/feedbin.js';
 import { loadDisplayPrefs, applyDisplayPrefs } from './displayPrefs.js';
+import { activeMutedIds, muteSource, unmuteSource, cleanExpiredMutes, getMutedSources, type MuteEntry } from './mutedSources.js';
 import type { Article, Category, Source, StreamAdapter, AdapterConfig } from './types.js';
 import './theme.css';
 
@@ -117,6 +118,11 @@ export function App() {
   );
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [mutedIds, setMutedIds] = useState<Set<string>>(() => {
+    cleanExpiredMutes();
+    return activeMutedIds();
+  });
+  const [mutedEntries, setMutedEntries] = useState<MuteEntry[]>(() => getMutedSources());
 
   // Apply saved display prefs on mount (text size, fade intensity, accent colour)
   useEffect(() => {
@@ -234,6 +240,21 @@ export function App() {
     }
   }, [state, refreshing]);
 
+  const handleMute = useCallback((sourceId: string, mutedUntil: number) => {
+    const src = (state.status === 'ready' || state.status === 'settings')
+      ? state.sources.find(s => s.id === sourceId)
+      : undefined;
+    muteSource(sourceId, src?.title ?? sourceId, mutedUntil);
+    setMutedIds(prev => new Set([...prev, sourceId]));
+    setMutedEntries(getMutedSources());
+  }, [state]);
+
+  const handleUnmute = useCallback((sourceId: string) => {
+    unmuteSource(sourceId);
+    setMutedIds(prev => { const next = new Set(prev); next.delete(sourceId); return next; });
+    setMutedEntries(getMutedSources());
+  }, []);
+
   // Auto-connect on mount if credentials are saved
   useEffect(() => {
     const saved = loadSavedConnection();
@@ -295,6 +316,8 @@ export function App() {
               categories={state.categories}
               now={now}
               hidden={inSettings}
+              mutedIds={mutedIds}
+              onMute={handleMute}
             />
             {inSettings && (
               <Settings
@@ -304,6 +327,8 @@ export function App() {
                 onUpdate={handleVelocityUpdate}
                 onCategoryChange={handleCategoryChange}
                 onImported={handleImported}
+                mutedEntries={mutedEntries}
+                onUnmute={handleUnmute}
               />
             )}
           </>
@@ -380,9 +405,11 @@ interface ReadyViewProps {
   categories: Category[];
   now: number;
   hidden?: boolean;
+  mutedIds: Set<string>;
+  onMute: (sourceId: string, mutedUntil: number) => void;
 }
 
-function ReadyView({ adapter, sources, articles, categories, now, hidden }: ReadyViewProps) {
+function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedIds, onMute }: ReadyViewProps) {
   const [openArticle, setOpenArticle]       = useState<Article | null>(null);
   const [showHelp, setShowHelp]             = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -403,6 +430,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden }: Read
   const sourceMap = new Map(sources.map(s => [s.id, s]));
 
   const filteredArticles = articles.filter(a => {
+    if (mutedIds.has(a.sourceId)) return false;
     const starred = starredOverrides.has(a.id) ? starredOverrides.get(a.id) : a.isStarred;
     if (savedOnly && !starred) return false;
     if (unreadOnly && a.isRead) return false;
@@ -476,6 +504,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden }: Read
         onSave={river.save}
         onOpen={river.openItem}
         onUndo={river.undo}
+        onMute={onMute}
       />
       {openArticle && (
         <ReadingView

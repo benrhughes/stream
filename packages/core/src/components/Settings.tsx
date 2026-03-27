@@ -6,6 +6,7 @@ import {
   ACCENT_OPTIONS,
   type TextSize, type FadeLevel, type DisplayPrefs,
 } from '../displayPrefs.js';
+import type { MuteEntry } from '../mutedSources.js';
 import styles from './Settings.module.css';
 
 const TIERS: Array<{ tier: 1|2|3|4|5; label: string }> = [
@@ -25,9 +26,11 @@ interface SettingsProps {
   onUpdate: (sourceId: string, tier: 1|2|3|4|5) => void;
   onCategoryChange: (sourceId: string, categoryId: string) => void;
   onImported?: () => void;
+  mutedEntries?: MuteEntry[];
+  onUnmute?: (sourceId: string) => void;
 }
 
-export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported }: SettingsProps) {
+export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported, mutedEntries, onUnmute }: SettingsProps) {
   const [query, setQuery]             = useState('');
   const [importStatus, setImportStatus] = useState<AsyncStatus>({ type: 'idle' });
   const [addStatus, setAddStatus]     = useState<AsyncStatus>({ type: 'idle' });
@@ -232,6 +235,33 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
         </div>
       )}
       </details>
+
+      {mutedEntries && mutedEntries.length > 0 && (
+        <details class={styles.section}>
+          <summary class={styles.sectionHeading}>
+            Muted sources
+            <span class={styles.mutedBadge}>{mutedEntries.length}</span>
+          </summary>
+          <div class={styles.list} role="list">
+            {mutedEntries.map(entry => {
+              const until = new Date(entry.mutedUntil);
+              const label = until.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+              return (
+                <div key={entry.sourceId} class={styles.mutedRow} role="listitem">
+                  <span class={styles.mutedTitle}>{entry.sourceTitle}</span>
+                  <span class={styles.mutedUntil}>until {label}</span>
+                  <button
+                    class={styles.unmuteBtn}
+                    onClick={() => onUnmute?.(entry.sourceId)}
+                  >
+                    Unmute
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
 
       <footer class={styles.footer}>
         <a
