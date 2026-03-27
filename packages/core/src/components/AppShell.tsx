@@ -117,7 +117,11 @@ export function AppShell({
       </header>
       {paused && (
         <div class={styles.pauseBanner}>
-          ⏸ River paused — articles are not fading
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+            <rect x="1.5" y="1" width="3.5" height="10" rx="1"/>
+            <rect x="7" y="1" width="3.5" height="10" rx="1"/>
+          </svg>
+          River paused — articles are not fading
           <button class={styles.pauseBannerBtn} onClick={onTogglePause}>Resume</button>
         </div>
       )}

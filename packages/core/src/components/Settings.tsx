@@ -409,6 +409,9 @@ interface SourceRowProps {
 }
 
 function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRowProps) {
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
   const handleFaviconError = (e: Event) => {
     (e.target as HTMLImageElement).setAttribute('data-error', '');
   };
@@ -416,16 +419,28 @@ function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRow
   const handleCategorySelect = (e: Event) => {
     const val = (e.target as HTMLSelectElement).value;
     if (val === '__new__') {
-      const name = prompt('New category name:')?.trim();
-      if (name) {
-        onCategoryChange(source.id, name);
-      } else {
-        // Revert the select to its previous value
-        (e.target as HTMLSelectElement).value = source.categoryId ?? '';
-      }
+      setAddingCategory(true);
+      setNewCatName('');
     } else {
       onCategoryChange(source.id, val);
     }
+  };
+
+  const commitNewCategory = () => {
+    const name = newCatName.trim();
+    if (name) onCategoryChange(source.id, name);
+    setAddingCategory(false);
+    setNewCatName('');
+  };
+
+  const cancelNewCategory = () => {
+    setAddingCategory(false);
+    setNewCatName('');
+  };
+
+  const handleNewCatKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitNewCategory(); }
+    if (e.key === 'Escape') cancelNewCategory();
   };
 
   return (
@@ -449,18 +464,32 @@ function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRow
       </span>
 
       {categories !== undefined && (
-        <select
-          class={styles.catSelect}
-          value={source.categoryId ?? ''}
-          onChange={handleCategorySelect}
-          aria-label={`Category for ${source.title}`}
-        >
-          <option value="">Uncategorized</option>
-          {categories.map(c => (
-            <option key={c.id} value={c.id}>{c.title}</option>
-          ))}
-          <option value="__new__">+ New category…</option>
-        </select>
+        addingCategory ? (
+          <input
+            class={styles.newCatInput}
+            type="text"
+            value={newCatName}
+            placeholder="Category name"
+            aria-label="New category name"
+            autoFocus
+            onInput={(e) => setNewCatName((e.target as HTMLInputElement).value)}
+            onKeyDown={handleNewCatKeyDown}
+            onBlur={commitNewCategory}
+          />
+        ) : (
+          <select
+            class={styles.catSelect}
+            value={source.categoryId ?? ''}
+            onChange={handleCategorySelect}
+            aria-label={`Category for ${source.title}`}
+          >
+            <option value="">Uncategorized</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.title}</option>
+            ))}
+            <option value="__new__">+ New category…</option>
+          </select>
+        )
       )}
 
       <VelocitySlider
