@@ -34,6 +34,18 @@ interface SettingsProps {
   onDismissSuggestion?: (sourceId: string) => void;
 }
 
+const SECTIONS_KEY = 'stream-settings-sections';
+const DEFAULT_SECTIONS = { addFeeds: true, display: true, velocity: true, mutedSources: false, exportImport: false };
+type SectionState = typeof DEFAULT_SECTIONS;
+
+function loadSections(): SectionState {
+  try {
+    const saved = localStorage.getItem(SECTIONS_KEY);
+    if (saved) return { ...DEFAULT_SECTIONS, ...JSON.parse(saved) };
+  } catch { /* ignore */ }
+  return { ...DEFAULT_SECTIONS };
+}
+
 const EXPORT_VERSION = '1';
 const EXPORT_KEYS: Record<string, string> = {
   velocity: 'stream-velocity',
@@ -66,7 +78,16 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
   const [addStatus, setAddStatus]     = useState<AsyncStatus>({ type: 'idle' });
   const [feedUrl, setFeedUrl]         = useState('');
   const [display, setDisplay]         = useState<DisplayPrefs>(loadDisplayPrefs);
+  const [sections, setSections]       = useState<SectionState>(loadSections);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function toggleSection(key: keyof SectionState, open: boolean) {
+    setSections(prev => {
+      const next = { ...prev, [key]: open };
+      try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
 
   useEffect(() => {
     applyDisplayPrefs(display);
@@ -139,7 +160,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
       <h2 class={styles.heading}>Settings</h2>
 
       {adapter && (
-        <details class={styles.section} open>
+        <details class={styles.section} open={sections.addFeeds} onToggle={(e) => toggleSection('addFeeds', (e.currentTarget as HTMLDetailsElement).open)}>
           <summary class={styles.sectionHeading}>Add feeds</summary>
 
           <form class={styles.addForm} onSubmit={handleAddFeed}>
@@ -190,7 +211,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
         </details>
       )}
 
-      <details class={styles.section} open>
+      <details class={styles.section} open={sections.display} onToggle={(e) => toggleSection('display', (e.currentTarget as HTMLDetailsElement).open)}>
         <summary class={styles.sectionHeading}>Display</summary>
         <div class={styles.displayGrid}>
           <span class={styles.displayLabel}>Text size</span>
@@ -238,7 +259,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
         </div>
       </details>
 
-      <details class={styles.section} open>
+      <details class={styles.section} open={sections.velocity} onToggle={(e) => toggleSection('velocity', (e.currentTarget as HTMLDetailsElement).open)}>
         <summary class={styles.sectionHeading}>Velocity</summary>
         <p class={styles.sub}>
           Shorter half-lives push older articles down faster.
@@ -318,7 +339,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
       </details>
 
       {mutedEntries && mutedEntries.length > 0 && (
-        <details class={styles.section}>
+        <details class={styles.section} open={sections.mutedSources} onToggle={(e) => toggleSection('mutedSources', (e.currentTarget as HTMLDetailsElement).open)}>
           <summary class={styles.sectionHeading}>
             Muted sources
             <span class={styles.mutedBadge}>{mutedEntries.length}</span>
@@ -344,7 +365,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
         </details>
       )}
 
-      <details class={styles.section}>
+      <details class={styles.section} open={sections.exportImport} onToggle={(e) => toggleSection('exportImport', (e.currentTarget as HTMLDetailsElement).open)}>
         <summary class={styles.sectionHeading}>Export &amp; import</summary>
         <p class={styles.sub}>
           Export your velocity tiers, display settings, and muted sources as a JSON file.

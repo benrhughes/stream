@@ -366,21 +366,23 @@ details[open] > .sectionHeading::before {
   content: none;
 }
 
-/* + / − toggle on the right */
+/* Rotating chevron on the right */
 .sectionHeading::after {
-  content: '+';
+  content: '▾';
   font-family: var(--font-sans);
-  font-size: 1.125rem;
-  font-weight: 300;
+  font-size: 1rem;
+  font-weight: 400;
   color: var(--text-muted);
   line-height: 1;
   flex-shrink: 0;
   margin-left: 1rem;
-  transition: color var(--transition);
+  display: inline-block;
+  transform: rotate(-90deg); /* closed → pointing right */
+  transition: transform var(--transition), color var(--transition);
 }
 
 details[open] > .sectionHeading::after {
-  content: '−';
+  transform: rotate(0deg); /* open → pointing down */
 }
 
 .sectionHeading:hover {
