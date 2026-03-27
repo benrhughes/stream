@@ -7,6 +7,7 @@ import {
   type TextSize, type FadeLevel, type DisplayPrefs,
 } from '../displayPrefs.js';
 import type { MuteEntry } from '../mutedSources.js';
+import type { VelocitySuggestion } from '../velocitySuggestions.js';
 import styles from './Settings.module.css';
 
 const TIERS: Array<{ tier: 1|2|3|4|5; label: string }> = [
@@ -28,9 +29,12 @@ interface SettingsProps {
   onImported?: () => void;
   mutedEntries?: MuteEntry[];
   onUnmute?: (sourceId: string) => void;
+  suggestions?: VelocitySuggestion[];
+  onApplySuggestion?: (sourceId: string, tier: 1|2|3|4|5) => void;
+  onDismissSuggestion?: (sourceId: string) => void;
 }
 
-export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported, mutedEntries, onUnmute }: SettingsProps) {
+export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported, mutedEntries, onUnmute, suggestions, onApplySuggestion, onDismissSuggestion }: SettingsProps) {
   const [query, setQuery]             = useState('');
   const [importStatus, setImportStatus] = useState<AsyncStatus>({ type: 'idle' });
   const [addStatus, setAddStatus]     = useState<AsyncStatus>({ type: 'idle' });
@@ -192,6 +196,36 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
         <p class={styles.sub}>
           How quickly should each source's articles fade? Shorter = faster.
         </p>
+
+        {suggestions && suggestions.length > 0 && (
+          <div class={styles.suggestions}>
+            <h3 class={styles.subHeading}>Suggestions</h3>
+            {suggestions.map(s => (
+              <div key={s.sourceId} class={styles.suggestionRow}>
+                <div class={styles.suggestionMeta}>
+                  <span class={styles.suggestionTitle}>{s.sourceTitle}</span>
+                  <span class={styles.suggestionReason}>{s.reason}</span>
+                </div>
+                <div class={styles.suggestionActions}>
+                  <button
+                    class={styles.suggestionApply}
+                    onClick={() => onApplySuggestion?.(s.sourceId, s.suggestedTier)}
+                    title={`Change to tier ${s.suggestedTier}`}
+                  >
+                    Apply
+                  </button>
+                  <button
+                    class={styles.suggestionDismiss}
+                    onClick={() => onDismissSuggestion?.(s.sourceId)}
+                    title="Dismiss for 30 days"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       {categories && categories.length > 0 && (
         <>

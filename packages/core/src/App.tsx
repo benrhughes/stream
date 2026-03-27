@@ -14,6 +14,7 @@ import { FeedbinAdapter } from './adapters/feedbin.js';
 import { loadDisplayPrefs, applyDisplayPrefs } from './displayPrefs.js';
 import { activeMutedIds, muteSource, unmuteSource, cleanExpiredMutes, getMutedSources, type MuteEntry } from './mutedSources.js';
 import { isPaused, pauseRiver, resumeRiver, effectiveNow } from './quietHours.js';
+import { logArticleOpen, generateSuggestions, dismissSuggestion, type VelocitySuggestion } from './velocitySuggestions.js';
 import type { Article, Category, Source, StreamAdapter, AdapterConfig } from './types.js';
 import './theme.css';
 
@@ -125,6 +126,7 @@ export function App() {
   });
   const [mutedEntries, setMutedEntries] = useState<MuteEntry[]>(() => getMutedSources());
   const [paused, setPaused] = useState(() => isPaused());
+  const [suggestions, setSuggestions] = useState<VelocitySuggestion[]>([]);
 
   // Apply saved display prefs on mount (text size, fade intensity, accent colour)
   useEffect(() => {
@@ -344,6 +346,16 @@ export function App() {
                 onImported={handleImported}
                 mutedEntries={mutedEntries}
                 onUnmute={handleUnmute}
+                suggestions={generateSuggestions(state.sources)}
+                onApplySuggestion={(sourceId, tier) => {
+                  handleVelocityUpdate(sourceId, tier);
+                  dismissSuggestion(sourceId);
+                  setSuggestions(generateSuggestions(state.sources));
+                }}
+                onDismissSuggestion={(sourceId) => {
+                  dismissSuggestion(sourceId);
+                  setSuggestions(generateSuggestions(state.sources));
+                }}
               />
             )}
           </>
@@ -463,6 +475,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
   const handleOpen = useCallback((article: Article) => {
     setOpenArticle(article);
     adapter.setArticleRead(article.id).catch(() => {});
+    logArticleOpen(article.id, article.sourceId);
   }, [adapter]);
 
   const handleSave = useCallback(async (article: Article) => {
