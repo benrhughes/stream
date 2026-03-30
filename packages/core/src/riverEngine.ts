@@ -62,6 +62,9 @@ export function scoreRiver(
 
       if (preserveAll) return [{ article, score: 1 }];
 
+      // Pinned sources never decay — always score 1
+      if (source.isVoice) return [{ article, score: 1 }];
+
       const halfLife = resolveHalfLife(source);
       const score = visibilityScore(article.publishedAt, halfLife, now);
 

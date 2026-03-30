@@ -8,6 +8,7 @@ import type {
   Category,
   Article,
 } from '../types.js';
+import { extractImageFromHtml } from '../extractImage.js';
 
 const FEEDBIN_BASE = 'https://api.feedbin.com/v2';
 
@@ -199,17 +200,21 @@ export class FeedbinAdapter implements StreamAdapter {
     const rawEntries: RawEntry[] = await entriesRes.json();
     const nextPage = parseLinkNextPage(entriesRes.headers.get('Link'));
 
-    const articles: Article[] = rawEntries.map(e => ({
-      id:          String(e.id),
-      sourceId:    String(e.feed_id),
-      title:       e.title ?? '(no title)',
-      author:      e.author ?? undefined,
-      url:         e.url,
-      content:     e.content ?? e.summary ?? '',
-      publishedAt: new Date(e.published),
-      isRead:      !this.unreadIds.has(String(e.id)),
-      isStarred:   this.starredIds.has(String(e.id)),
-    }));
+    const articles: Article[] = rawEntries.map(e => {
+      const content = e.content ?? e.summary ?? '';
+      return {
+        id:          String(e.id),
+        sourceId:    String(e.feed_id),
+        title:       e.title ?? '(no title)',
+        author:      e.author ?? undefined,
+        url:         e.url,
+        content,
+        imageUrl:    extractImageFromHtml(content),
+        publishedAt: new Date(e.published),
+        isRead:      !this.unreadIds.has(String(e.id)),
+        isStarred:   this.starredIds.has(String(e.id)),
+      };
+    });
 
     return {
       articles,

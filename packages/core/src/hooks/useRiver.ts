@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import type { ScoredArticle } from '../riverEngine.js';
 import type { Article } from '../types.js';
+import { getDismissedIds, addDismissed, removeDismissed } from '../dismissedArticles.js';
 
 interface DismissedItem {
   scored: ScoredArticle;
@@ -35,7 +36,7 @@ export function useRiver(
   const [pendingUndo, setPendingUndo] = useState<DismissedItem | null>(null);
 
   // Tracks dismissed IDs so a refresh doesn't resurrect them
-  const dismissedIds = useRef<Set<string>>(new Set());
+  const dismissedIds = useRef<Set<string>>(getDismissedIds());
 
   // Sync when parent provides fresh scored articles (e.g. after refresh)
   useEffect(() => {
@@ -59,6 +60,7 @@ export function useRiver(
     if (existing) clearTimeout(existing.timerId);
 
     dismissedIds.current.add(id);
+    addDismissed(id);
     setItems(current.filter((_, i) => i !== atIndex));
     if (onRead) onRead(dismissed.article).catch(() => {});
 
@@ -85,6 +87,7 @@ export function useRiver(
 
     clearTimeout(existing.timerId);
     dismissedIds.current.delete(existing.scored.article.id);
+    removeDismissed(existing.scored.article.id);
     setPendingUndo(null);
 
     setItems(prev => {

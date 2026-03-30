@@ -3,8 +3,8 @@ import type { Category, Source, StreamAdapter } from '../types.js';
 import { HALF_LIVES } from '../riverEngine.js';
 import {
   loadDisplayPrefs, saveDisplayPrefs, applyDisplayPrefs,
-  ACCENT_OPTIONS,
-  type TextSize, type FadeLevel, type DisplayPrefs,
+  ACCENT_OPTIONS, EXPIRY_OPTIONS,
+  type TextSize, type FadeLevel, type ExpiryDays, type DisplayPrefs,
 } from '../displayPrefs.js';
 import type { MuteEntry } from '../mutedSources.js';
 import type { VelocitySuggestion } from '../velocitySuggestions.js';
@@ -32,6 +32,9 @@ interface SettingsProps {
   suggestions?: VelocitySuggestion[];
   onApplySuggestion?: (sourceId: string, tier: 1|2|3|4|5) => void;
   onDismissSuggestion?: (sourceId: string) => void;
+  onDeleteSource?: (sourceId: string) => Promise<void>;
+  onExpiryChange?: (days: ExpiryDays) => void;
+  onTogglePin?: (sourceId: string, pinned: boolean) => void;
 }
 
 const SECTIONS_KEY = 'stream-settings-sections';
@@ -48,9 +51,10 @@ function loadSections(): SectionState {
 
 const EXPORT_VERSION = '1';
 const EXPORT_KEYS: Record<string, string> = {
-  velocity: 'stream-velocity',
-  display:  'stream-display',
-  muted:    'stream-muted-sources',
+  velocity:  'stream-velocity',
+  display:   'stream-display',
+  muted:     'stream-muted-sources',
+  dismissed: 'stream-dismissed',
 };
 
 function handleExport() {
@@ -70,7 +74,7 @@ function handleExport() {
   URL.revokeObjectURL(url);
 }
 
-export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported, mutedEntries, onUnmute, suggestions, onApplySuggestion, onDismissSuggestion }: SettingsProps) {
+export function Settings({ sources, categories, adapter, onUpdate, onCategoryChange, onImported, mutedEntries, onUnmute, suggestions, onApplySuggestion, onDismissSuggestion, onDeleteSource, onExpiryChange, onTogglePin }: SettingsProps) {
   const [query, setQuery]             = useState('');
   const [importStatus, setImportStatus] = useState<AsyncStatus>({ type: 'idle' });
   const [dataImportStatus, setDataImportStatus] = useState<AsyncStatus>({ type: 'idle' });
@@ -256,6 +260,25 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
               </button>
             ))}
           </div>
+
+          <span class={styles.displayLabel}>Auto-expiry</span>
+          <div class={styles.tiers} role="group" aria-label="Auto-expiry">
+            {EXPIRY_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                class={`${styles.tierBtn} ${display.expiryDays === value ? styles.active : ''}`}
+                onClick={() => {
+                  const next = { ...display, expiryDays: value };
+                  setDisplay(next);
+                  saveDisplayPrefs(next);
+                  onExpiryChange?.(value);
+                }}
+                aria-pressed={display.expiryDays === value}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </details>
 
@@ -332,6 +355,8 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
               categories={categories}
               onUpdate={onUpdate}
               onCategoryChange={onCategoryChange}
+              onDelete={onDeleteSource}
+              onTogglePin={onTogglePin}
             />
           ))}
         </div>
@@ -368,7 +393,7 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
       <details class={styles.section} open={sections.exportImport} onToggle={(e) => toggleSection('exportImport', (e.currentTarget as HTMLDetailsElement).open)}>
         <summary class={styles.sectionHeading}>Export &amp; import</summary>
         <p class={styles.sub}>
-          Export your velocity tiers, display settings, and muted sources as a JSON file.
+          Export your velocity tiers, display settings, muted sources, and dismissed articles as a JSON file.
           Import on another device or browser to restore your configuration.
         </p>
         <div class={styles.dataActions}>
@@ -427,11 +452,29 @@ interface SourceRowProps {
   categories?: Category[];
   onUpdate: (sourceId: string, tier: 1|2|3|4|5) => void;
   onCategoryChange: (sourceId: string, categoryId: string) => void;
+  onDelete?: (sourceId: string) => Promise<void>;
+  onTogglePin?: (sourceId: string, pinned: boolean) => void;
 }
 
-function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRowProps) {
+function SourceRow({ source, categories, onUpdate, onCategoryChange, onDelete, onTogglePin }: SourceRowProps) {
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDelete(source.id);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed.');
+      setDeleting(false);
+      setTimeout(() => setDeleteError(null), 3_000);
+    }
+  };
 
   const handleFaviconError = (e: Event) => {
     (e.target as HTMLImageElement).setAttribute('data-error', '');
@@ -513,11 +556,58 @@ function SourceRow({ source, categories, onUpdate, onCategoryChange }: SourceRow
         )
       )}
 
-      <VelocitySlider
-        tier={source.velocityTier}
-        label={`Velocity for ${source.title}`}
-        onChange={(t) => onUpdate(source.id, t)}
-      />
+      {!source.isVoice && (
+        <VelocitySlider
+          tier={source.velocityTier}
+          label={`Velocity for ${source.title}`}
+          onChange={(t) => onUpdate(source.id, t)}
+        />
+      )}
+
+      {onTogglePin && (
+        <button
+          class={`${styles.pinBtn} ${source.isVoice ? styles.pinBtnActive : ''}`}
+          onClick={() => onTogglePin(source.id, !source.isVoice)}
+          aria-pressed={source.isVoice}
+          aria-label={source.isVoice ? `Unpin ${source.title}` : `Pin ${source.title}`}
+          title={source.isVoice ? 'Pinned — never fades' : 'Pin — never fades'}
+        >
+          {source.isVoice ? '◆' : '◇'}
+        </button>
+      )}
+
+      {onDelete && !confirmDelete && (
+        <button
+          class={styles.deleteBtn}
+          onClick={() => setConfirmDelete(true)}
+          aria-label={`Delete ${source.title}`}
+          title="Remove feed"
+        >
+          &times;
+        </button>
+      )}
+      {confirmDelete && (
+        <div class={styles.confirmDelete}>
+          <span class={styles.confirmText}>Remove?</span>
+          <button
+            class={styles.confirmYes}
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'Removing\u2026' : 'Yes'}
+          </button>
+          <button
+            class={styles.confirmNo}
+            onClick={() => { setConfirmDelete(false); setDeleteError(null); }}
+            disabled={deleting}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      {deleteError && (
+        <span class={styles.importErr}>{deleteError}</span>
+      )}
     </div>
   );
 }

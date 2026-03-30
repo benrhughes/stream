@@ -241,6 +241,26 @@
   color: var(--text);
 }
 
+/* Body: title + preview alongside optional thumbnail */
+.body {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.bodyText {
+  flex: 1;
+  min-width: 0;
+}
+
+.thumbnail {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  align-self: flex-start;
+}
+
 /* Title button */
 .titleLink {
   display: block;

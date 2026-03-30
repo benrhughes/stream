@@ -13,6 +13,7 @@ import { FreshRSSAdapter } from './adapters/freshrss.js';
 import { FeedbinAdapter } from './adapters/feedbin.js';
 import { loadDisplayPrefs, applyDisplayPrefs } from './displayPrefs.js';
 import { activeMutedIds, muteSource, unmuteSource, cleanExpiredMutes, getMutedSources, type MuteEntry } from './mutedSources.js';
+import { purgeDismissed } from './dismissedArticles.js';
 import { isPaused, pauseRiver, resumeRiver, effectiveNow } from './quietHours.js';
 import { logArticleOpen, generateSuggestions, dismissSuggestion, type VelocitySuggestion } from './velocitySuggestions.js';
 import type { Article, Category, Source, StreamAdapter, AdapterConfig } from './types.js';
@@ -122,11 +123,13 @@ export function App() {
   const [now, setNow] = useState(() => Date.now());
   const [mutedIds, setMutedIds] = useState<Set<string>>(() => {
     cleanExpiredMutes();
+    purgeDismissed();
     return activeMutedIds();
   });
   const [mutedEntries, setMutedEntries] = useState<MuteEntry[]>(() => getMutedSources());
   const [paused, setPaused] = useState(() => isPaused());
   const [suggestions, setSuggestions] = useState<VelocitySuggestion[]>([]);
+  const [expiryDays, setExpiryDays] = useState(() => loadDisplayPrefs().expiryDays);
 
   // Apply saved display prefs on mount (text size, fade intensity, accent colour)
   useEffect(() => {
@@ -264,6 +267,30 @@ export function App() {
     setMutedEntries(getMutedSources());
   }, [state]);
 
+  const handleTogglePin = useCallback((sourceId: string, pinned: boolean) => {
+    setState(prev => {
+      if (prev.status !== 'settings' && prev.status !== 'ready') return prev;
+      const cfg = loadVelocityConfig();
+      cfg[sourceId] = { tier: cfg[sourceId]?.tier ?? 3, isVoice: pinned };
+      saveVelocityConfig(cfg);
+      const sources = prev.sources.map(s =>
+        s.id === sourceId ? { ...s, isVoice: pinned } : s
+      );
+      return { ...prev, sources };
+    });
+  }, []);
+
+  const handleDeleteSource = useCallback(async (sourceId: string) => {
+    if (state.status !== 'settings') return;
+    await state.adapter.removeSource(sourceId);
+    const rawSources = await state.adapter.fetchSources();
+    const sources = applySavedVelocity(rawSources, loadVelocityConfig());
+    const categories = await state.adapter.fetchCategories().catch(() => [] as Category[]);
+    setState(prev =>
+      prev.status === 'settings' ? { ...prev, sources, categories } : prev
+    );
+  }, [state]);
+
   const handleUnmute = useCallback((sourceId: string) => {
     unmuteSource(sourceId);
     setMutedIds(prev => { const next = new Set(prev); next.delete(sourceId); return next; });
@@ -335,6 +362,7 @@ export function App() {
               hidden={inSettings}
               mutedIds={mutedIds}
               onMute={handleMute}
+              expiryDays={expiryDays}
             />
             {inSettings && (
               <Settings
@@ -356,6 +384,9 @@ export function App() {
                   dismissSuggestion(sourceId);
                   setSuggestions(generateSuggestions(state.sources));
                 }}
+                onDeleteSource={handleDeleteSource}
+                onExpiryChange={setExpiryDays}
+                onTogglePin={handleTogglePin}
               />
             )}
           </>
@@ -434,9 +465,10 @@ interface ReadyViewProps {
   hidden?: boolean;
   mutedIds: Set<string>;
   onMute: (sourceId: string, mutedUntil: number) => void;
+  expiryDays: number;
 }
 
-function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedIds, onMute }: ReadyViewProps) {
+function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedIds, onMute, expiryDays }: ReadyViewProps) {
   const [openArticle, setOpenArticle]       = useState<Article | null>(null);
   const [showHelp, setShowHelp]             = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -456,11 +488,17 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
 
   const sourceMap = new Map(sources.map(s => [s.id, s]));
 
+  const expiryCutoff = expiryDays > 0
+    ? new Date(now - expiryDays * 24 * 60 * 60 * 1000)
+    : null;
+
   const filteredArticles = articles.filter(a => {
     if (mutedIds.has(a.sourceId)) return false;
     const starred = starredOverrides.has(a.id) ? starredOverrides.get(a.id) : a.isStarred;
     if (savedOnly && !starred) return false;
     if (unreadOnly && a.isRead) return false;
+    // Auto-expiry: remove old articles unless saved
+    if (expiryCutoff && !starred && a.publishedAt < expiryCutoff) return false;
     if (activeCategory !== null) {
       const src = sourceMap.get(a.sourceId);
       if (!src || src.categoryId !== activeCategory) return false;
@@ -523,6 +561,16 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
       .map(a => a.id),
   );
 
+  // Count unread articles per category for the filter bar
+  const unreadByCategory = new Map<string, number>();
+  for (const a of articles) {
+    if (a.isRead || mutedIds.has(a.sourceId)) continue;
+    const src = sourceMap.get(a.sourceId);
+    if (src?.categoryId) {
+      unreadByCategory.set(src.categoryId, (unreadByCategory.get(src.categoryId) ?? 0) + 1);
+    }
+  }
+
   const emptyMessage = savedOnly ? 'No saved articles yet.' : 'The stream is quiet.';
 
   return (
@@ -532,6 +580,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
         activeCategory={activeCategory}
         unreadOnly={unreadOnly}
         savedOnly={savedOnly}
+        unreadByCategory={unreadByCategory}
         onCategory={setActiveCategory}
         onUnreadOnly={setUnreadOnly}
         onSavedOnly={setSavedOnly}
