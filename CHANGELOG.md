@@ -1,10 +1,15 @@
 # Changelog
 
-## 0.6.1
+## 0.7.0
+
+### Features
+
+- **AI assistant** — optional Google Gemini integration in Settings. Add your free API key to get category suggestions for uncategorised feeds and discover new feeds based on your subscriptions. Your key stays in the browser; only feed titles and URLs are sent to Google.
 
 ### Bug fixes
 
 - **Deleted feed articles** — articles from a deleted feed are now removed from the stream immediately upon deletion, rather than persisting in memory for the rest of the session. (#23)
+- **Category badges** — removed unread article counts from category filter pills.
 
 ## 0.6.0
 

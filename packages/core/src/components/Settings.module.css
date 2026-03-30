@@ -680,6 +680,44 @@ details[open] > .sectionHeading::after {
 
 .suggestionDismiss:hover { color: var(--text); }
 
+/* AI assistant */
+.aiKeyRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.aiActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.aiCategoryTag {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-new);
+  border: 1px solid var(--accent-new);
+  border-radius: 3px;
+  padding: 0.0625rem 0.3125rem;
+  vertical-align: baseline;
+}
+
+.aiNewBadge {
+  font-size: 0.625rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* Export & import */
 .dataActions {
   display: flex;

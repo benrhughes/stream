@@ -42,20 +42,16 @@ export function FilterBar({
           >
             All
           </button>
-          {visibleCats.map(cat => {
-            const count = unreadByCategory?.get(cat.id) ?? 0;
-            return (
-              <button
-                key={cat.id}
-                class={`${styles.pill} ${activeCategory === cat.id ? styles.active : ''}`}
-                onClick={() => onCategory(activeCategory === cat.id ? null : cat.id)}
-                aria-pressed={activeCategory === cat.id}
-              >
-                {cat.title}
-                {count > 0 && <span class={styles.count}>{count}</span>}
-              </button>
-            );
-          })}
+          {visibleCats.map(cat => (
+            <button
+              key={cat.id}
+              class={`${styles.pill} ${activeCategory === cat.id ? styles.active : ''}`}
+              onClick={() => onCategory(activeCategory === cat.id ? null : cat.id)}
+              aria-pressed={activeCategory === cat.id}
+            >
+              {cat.title}
+            </button>
+          ))}
         </div>
       )}
       <div class={`${styles.statusPills} ${hasCats ? '' : styles.solo}`}>

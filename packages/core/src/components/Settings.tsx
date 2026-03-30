@@ -8,6 +8,11 @@ import {
 } from '../displayPrefs.js';
 import type { MuteEntry } from '../mutedSources.js';
 import type { VelocitySuggestion } from '../velocitySuggestions.js';
+import {
+  loadGeminiKey, saveGeminiKey, clearGeminiKey, testGeminiKey,
+  suggestCategories, suggestFeeds, dismissAISuggestion,
+  type AICategorySuggestion, type AIFeedSuggestion,
+} from '../geminiAI.js';
 import styles from './Settings.module.css';
 
 const TIERS: Array<{ tier: 1|2|3|4|5; label: string }> = [
@@ -38,7 +43,7 @@ interface SettingsProps {
 }
 
 const SECTIONS_KEY = 'stream-settings-sections';
-const DEFAULT_SECTIONS = { addFeeds: true, display: true, velocity: true, mutedSources: false, exportImport: false };
+const DEFAULT_SECTIONS = { addFeeds: true, display: true, ai: false, velocity: true, mutedSources: false, exportImport: false };
 type SectionState = typeof DEFAULT_SECTIONS;
 
 function loadSections(): SectionState {
@@ -51,10 +56,12 @@ function loadSections(): SectionState {
 
 const EXPORT_VERSION = '1';
 const EXPORT_KEYS: Record<string, string> = {
-  velocity:  'stream-velocity',
-  display:   'stream-display',
-  muted:     'stream-muted-sources',
-  dismissed: 'stream-dismissed',
+  velocity:   'stream-velocity',
+  display:    'stream-display',
+  muted:      'stream-muted-sources',
+  dismissed:  'stream-dismissed',
+  geminiKey:  'stream-gemini-key',
+  aiDismissed:'stream-ai-dismissed',
 };
 
 function handleExport() {
@@ -84,6 +91,15 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
   const [display, setDisplay]         = useState<DisplayPrefs>(loadDisplayPrefs);
   const [sections, setSections]       = useState<SectionState>(loadSections);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // AI assistant local state
+  const [aiKeyInput, setAiKeyInput]     = useState('');
+  const [aiKeySaved, setAiKeySaved]     = useState(() => !!loadGeminiKey());
+  const [aiKeyStatus, setAiKeyStatus]   = useState<AsyncStatus>({ type: 'idle' });
+  const [aiCatSuggestions, setAiCatSuggestions] = useState<AICategorySuggestion[]>([]);
+  const [aiFeedSuggestions, setAiFeedSuggestions] = useState<AIFeedSuggestion[]>([]);
+  const [aiCatStatus, setAiCatStatus]   = useState<AsyncStatus>({ type: 'idle' });
+  const [aiFeedStatus, setAiFeedStatus] = useState<AsyncStatus>({ type: 'idle' });
 
   function toggleSection(key: keyof SectionState, open: boolean) {
     setSections(prev => {
@@ -151,6 +167,91 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
     } finally {
       if (dataFileRef.current) dataFileRef.current.value = '';
     }
+  };
+
+  const handleAiKeySave = async () => {
+    const key = aiKeyInput.trim();
+    if (!key) return;
+    setAiKeyStatus({ type: 'loading' });
+    const ok = await testGeminiKey(key);
+    if (ok) {
+      saveGeminiKey(key);
+      setAiKeySaved(true);
+      setAiKeyInput('');
+      setAiKeyStatus({ type: 'idle' });
+    } else {
+      setAiKeyStatus({ type: 'error', message: 'Invalid key — check it and try again.' });
+    }
+  };
+
+  const handleAiKeyRemove = () => {
+    clearGeminiKey();
+    setAiKeySaved(false);
+    setAiKeyInput('');
+    setAiKeyStatus({ type: 'idle' });
+    setAiCatSuggestions([]);
+    setAiFeedSuggestions([]);
+    setAiCatStatus({ type: 'idle' });
+    setAiFeedStatus({ type: 'idle' });
+  };
+
+  const handleAiCatSuggest = async () => {
+    setAiCatStatus({ type: 'loading' });
+    setAiCatSuggestions([]);
+    try {
+      const results = await suggestCategories(sources, categories ?? []);
+      setAiCatSuggestions(results);
+      setAiCatStatus(results.length === 0
+        ? { type: 'ok', message: 'All feeds are already categorised.' }
+        : { type: 'idle' });
+    } catch (err) {
+      setAiCatStatus({ type: 'error', message: err instanceof Error ? err.message : 'Something went wrong.' });
+    }
+  };
+
+  const handleAiFeedSuggest = async () => {
+    setAiFeedStatus({ type: 'loading' });
+    setAiFeedSuggestions([]);
+    try {
+      const results = await suggestFeeds(sources, categories ?? []);
+      setAiFeedSuggestions(results);
+      setAiFeedStatus(results.length === 0
+        ? { type: 'ok', message: 'No suggestions available.' }
+        : { type: 'idle' });
+    } catch (err) {
+      setAiFeedStatus({ type: 'error', message: err instanceof Error ? err.message : 'Something went wrong.' });
+    }
+  };
+
+  const handleApplyAiCat = (sourceId: string, categoryName: string) => {
+    onCategoryChange(sourceId, categoryName);
+    dismissAISuggestion(sourceId);
+    setAiCatSuggestions(prev => prev.filter(s => s.sourceId !== sourceId));
+  };
+
+  const handleDismissAiCat = (sourceId: string) => {
+    dismissAISuggestion(sourceId);
+    setAiCatSuggestions(prev => prev.filter(s => s.sourceId !== sourceId));
+  };
+
+  const handleApplyAiFeed = async (feedUrl: string) => {
+    if (!adapter) return;
+    setAiFeedStatus({ type: 'loading' });
+    try {
+      await adapter.addSource(feedUrl);
+      onImported?.();
+      dismissAISuggestion(feedUrl);
+      setAiFeedSuggestions(prev => prev.filter(s => s.feedUrl !== feedUrl));
+      setAiFeedStatus({ type: 'idle' });
+    } catch (err) {
+      setAiFeedStatus({ type: 'error', message: err instanceof Error ? err.message : 'Could not add feed.' });
+      setTimeout(() => setAiFeedStatus({ type: 'idle' }), 3_000);
+    }
+  };
+
+  const handleDismissAiFeed = (feedUrl: string) => {
+    dismissAISuggestion(feedUrl);
+    setAiFeedSuggestions(prev => prev.filter(s => s.feedUrl !== feedUrl));
   };
 
   const filtered = query.trim()
@@ -280,6 +381,138 @@ export function Settings({ sources, categories, adapter, onUpdate, onCategoryCha
             ))}
           </div>
         </div>
+      </details>
+
+      <details class={styles.section} open={sections.ai} onToggle={(e) => toggleSection('ai', (e.currentTarget as HTMLDetailsElement).open)}>
+        <summary class={styles.sectionHeading}>AI assistant</summary>
+        <p class={styles.sub}>
+          Stream can use Google's Gemini AI to suggest categories for your feeds and recommend new ones to follow. This is entirely optional.
+        </p>
+        <p class={styles.sub}>
+          Your API key is stored in your browser only and never sent to Stream's servers. Requests go directly from your browser to Google. Only your feed titles and URLs are shared — not your articles or reading habits.
+        </p>
+
+        {!aiKeySaved ? (
+          <>
+            <p class={styles.sub}>
+              To get started: visit{' '}
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>,
+              {' '}create an API key (it starts with <code>AIza</code>), then paste it below.
+            </p>
+            <div class={styles.aiKeyRow}>
+              <input
+                class={styles.addInput}
+                type="password"
+                placeholder="AIza..."
+                value={aiKeyInput}
+                onInput={e => setAiKeyInput((e.target as HTMLInputElement).value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAiKeySave(); }}
+                aria-label="Gemini API key"
+                spellcheck={false}
+                autocomplete="off"
+              />
+              <button
+                class={styles.importBtn}
+                onClick={handleAiKeySave}
+                disabled={aiKeyStatus.type === 'loading' || !aiKeyInput.trim()}
+              >
+                {aiKeyStatus.type === 'loading' ? 'Checking…' : 'Save'}
+              </button>
+            </div>
+            {aiKeyStatus.type === 'error' && <span class={styles.importErr}>{aiKeyStatus.message}</span>}
+          </>
+        ) : (
+          <>
+            <div class={styles.aiKeyRow}>
+              <span class={styles.importOk}>✓ Key saved</span>
+              <button class={styles.suggestionDismiss} onClick={handleAiKeyRemove}>Remove</button>
+            </div>
+
+            <div class={styles.aiActions}>
+              <button
+                class={styles.importBtn}
+                onClick={handleAiCatSuggest}
+                disabled={aiCatStatus.type === 'loading' || sources.length === 0}
+              >
+                {aiCatStatus.type === 'loading' ? 'Thinking…' : 'Suggest categories'}
+              </button>
+              <button
+                class={styles.importBtn}
+                onClick={handleAiFeedSuggest}
+                disabled={aiFeedStatus.type === 'loading' || sources.length === 0}
+              >
+                {aiFeedStatus.type === 'loading' ? 'Thinking…' : 'Suggest feeds'}
+              </button>
+            </div>
+
+            {aiCatStatus.type === 'ok'    && <p class={styles.sub}>{aiCatStatus.message}</p>}
+            {aiCatStatus.type === 'error' && <p class={styles.importErr}>{aiCatStatus.message}</p>}
+            {aiCatSuggestions.length > 0 && (
+              <div class={styles.suggestions}>
+                <h3 class={styles.subHeading}>Suggested categories</h3>
+                {aiCatSuggestions.map(s => (
+                  <div key={s.sourceId} class={styles.suggestionRow}>
+                    <div class={styles.suggestionMeta}>
+                      <span class={styles.suggestionTitle}>{s.sourceTitle}</span>
+                      <span class={styles.suggestionReason}>
+                        <span class={styles.aiCategoryTag}>{s.suggestedCategoryName}</span>
+                        {s.isNewCategory && <span class={styles.aiNewBadge}> new</span>}
+                        {' — '}{s.reason}
+                      </span>
+                    </div>
+                    <div class={styles.suggestionActions}>
+                      <button
+                        class={styles.suggestionApply}
+                        onClick={() => handleApplyAiCat(s.sourceId, s.suggestedCategoryName)}
+                      >
+                        Apply
+                      </button>
+                      <button
+                        class={styles.suggestionDismiss}
+                        onClick={() => handleDismissAiCat(s.sourceId)}
+                        title="Dismiss for 30 days"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {aiFeedStatus.type === 'ok'    && <p class={styles.sub}>{aiFeedStatus.message}</p>}
+            {aiFeedStatus.type === 'error' && <p class={styles.importErr}>{aiFeedStatus.message}</p>}
+            {aiFeedSuggestions.length > 0 && (
+              <div class={styles.suggestions}>
+                <h3 class={styles.subHeading}>Suggested feeds</h3>
+                {aiFeedSuggestions.map(s => (
+                  <div key={s.feedUrl} class={styles.suggestionRow}>
+                    <div class={styles.suggestionMeta}>
+                      <span class={styles.suggestionTitle}>{s.title}</span>
+                      <span class={styles.suggestionReason}>{s.reason}</span>
+                    </div>
+                    <div class={styles.suggestionActions}>
+                      <button
+                        class={styles.suggestionApply}
+                        onClick={() => handleApplyAiFeed(s.feedUrl)}
+                        disabled={!adapter || aiFeedStatus.type === 'loading'}
+                      >
+                        Add
+                      </button>
+                      <button
+                        class={styles.suggestionDismiss}
+                        onClick={() => handleDismissAiFeed(s.feedUrl)}
+                        title="Dismiss for 30 days"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </details>
 
       <details class={styles.section} open={sections.velocity} onToggle={(e) => toggleSection('velocity', (e.currentTarget as HTMLDetailsElement).open)}>
