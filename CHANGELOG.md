@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.6.0
+
+### Features
+
+- **Dismiss persistence** — dismissed articles now survive page reloads. Stored in localStorage with a 14-day expiry. Undo still works correctly. (#14)
+- **Delete feeds** — remove feeds from Settings with an inline confirmation dialog (Remove? Yes / Cancel). (#19)
+- **Featured images** — article thumbnails extracted from content HTML and FreshRSS enclosures, displayed as 72px thumbnails in river cards. (#4)
+- **Auto-expiry** — new Display setting to hard-remove articles older than 1 day / 3 days / 1 week / 2 weeks / 30 days. Saved articles are exempt. (#16)
+- **Category filter** — filter bar now only shows categories with unread articles, with count badges. (#15)
+- **Pinned tier** — pin a source so its articles never fade (score stays at 1). Toggle via the diamond icon in Settings; velocity slider hides when pinned. (#17)
+
+### Improvements
+
+- **Mobile settings** — feed rows wrap at 600px so names are always readable. (#20)
+- **Proxy cache headers** — Netlify proxy now forwards cache-control, etag, and last-modified headers. (#21)
+
+### Accessibility and performance
+
+- Removed `outline: none` overrides so global focus-visible works on all inputs and selects.
+- Darkened light theme accent (#5E81AC to #4C7199) for WCAG AA contrast (4.6:1).
+- Expanded touch targets on swatch, pin, and delete buttons.
+- Added ARIA tab panel linkage to the connect screen.
+- Replaced `[state]` useCallback dependencies with stateRef pattern (prevents unnecessary re-renders).
+- Wrapped `savedIds` and `unreadByCategory` in `useMemo`.
+- Removed unused `idb` dependency.
+- Score timer pauses when tab is hidden.
+- Responsive source name sizing, toast overflow protection, lazy favicons.
+
 ## 0.5.2
 
 ### Accessibility and polish
