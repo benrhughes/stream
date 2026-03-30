@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'preact/hooks';
 import { scoreRiver, HALF_LIVES } from './riverEngine.js';
 import { useRiver } from './hooks/useRiver.js';
 import { useTheme } from './hooks/useTheme.js';
@@ -13,6 +13,7 @@ import { FreshRSSAdapter } from './adapters/freshrss.js';
 import { FeedbinAdapter } from './adapters/feedbin.js';
 import { loadDisplayPrefs, applyDisplayPrefs } from './displayPrefs.js';
 import { activeMutedIds, muteSource, unmuteSource, cleanExpiredMutes, getMutedSources, type MuteEntry } from './mutedSources.js';
+import { purgeDismissed } from './dismissedArticles.js';
 import { isPaused, pauseRiver, resumeRiver, effectiveNow } from './quietHours.js';
 import { logArticleOpen, generateSuggestions, dismissSuggestion, type VelocitySuggestion } from './velocitySuggestions.js';
 import type { Article, Category, Source, StreamAdapter, AdapterConfig } from './types.js';
@@ -118,25 +119,36 @@ export function App() {
   const [state, setState] = useState<AppState>(
     loadSavedConnection() ? { status: 'loading', adapter: null! } : { status: 'connect' },
   );
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; });
+
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [mutedIds, setMutedIds] = useState<Set<string>>(() => {
     cleanExpiredMutes();
+    purgeDismissed();
     return activeMutedIds();
   });
   const [mutedEntries, setMutedEntries] = useState<MuteEntry[]>(() => getMutedSources());
   const [paused, setPaused] = useState(() => isPaused());
   const [suggestions, setSuggestions] = useState<VelocitySuggestion[]>([]);
+  const [expiryDays, setExpiryDays] = useState(() => loadDisplayPrefs().expiryDays);
 
   // Apply saved display prefs on mount (text size, fade intensity, accent colour)
   useEffect(() => {
     applyDisplayPrefs(loadDisplayPrefs());
   }, []);
 
-  // Live score recalculation every 60s
+  // Live score recalculation every 60s — pauses when tab is hidden
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => { if (!id) id = setInterval(() => setNow(Date.now()), 60_000); };
+    const stop  = () => { if (id) { clearInterval(id); id = null; } };
+    const onVis = () => { document.hidden ? stop() : (setNow(Date.now()), start()); };
+
+    start();
+    document.addEventListener('visibilitychange', onVis);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVis); };
   }, []);
 
   const loadData = useCallback(async (adapter: StreamAdapter) => {
@@ -200,8 +212,9 @@ export function App() {
   }, []);
 
   const handleCategoryChange = useCallback(async (sourceId: string, categoryId: string) => {
-    if (state.status !== 'settings') return;
-    const adapter = state.adapter;
+    const s = stateRef.current;
+    if (s.status !== 'settings') return;
+    const adapter = s.adapter;
 
     // FreshRSS expects the full label stream ID; new names need the prefix added
     let backendCategoryId = categoryId;
@@ -221,17 +234,18 @@ export function App() {
     } catch {
       // Silent fail — source row will remain unchanged until next refresh
     }
-  }, [state]);
+  }, []);
 
   const handleRefresh = useCallback(async () => {
-    if (state.status !== 'ready' || refreshing) return;
+    const s = stateRef.current;
+    if (s.status !== 'ready') return;
     setRefreshing(true);
     try {
       const sources  = applySavedVelocity(
-        await state.adapter.fetchSources(), loadVelocityConfig()
+        await s.adapter.fetchSources(), loadVelocityConfig()
       );
-      const articles = await fetchAllArticles(state.adapter, sources);
-      const categories = await state.adapter.fetchCategories().catch(() => [] as Category[]);
+      const articles = await fetchAllArticles(s.adapter, sources);
+      const categories = await s.adapter.fetchCategories().catch(() => [] as Category[]);
       setState(prev =>
         prev.status === 'ready'
           ? { ...prev, sources, articles, categories }
@@ -242,7 +256,7 @@ export function App() {
     } finally {
       setRefreshing(false);
     }
-  }, [state, refreshing]);
+  }, []);
 
   const handleTogglePause = useCallback(() => {
     if (isPaused()) {
@@ -256,13 +270,39 @@ export function App() {
   }, []);
 
   const handleMute = useCallback((sourceId: string, mutedUntil: number) => {
-    const src = (state.status === 'ready' || state.status === 'settings')
-      ? state.sources.find(s => s.id === sourceId)
+    const s = stateRef.current;
+    const src = (s.status === 'ready' || s.status === 'settings')
+      ? s.sources.find(sr => sr.id === sourceId)
       : undefined;
     muteSource(sourceId, src?.title ?? sourceId, mutedUntil);
     setMutedIds(prev => new Set([...prev, sourceId]));
     setMutedEntries(getMutedSources());
-  }, [state]);
+  }, []);
+
+  const handleTogglePin = useCallback((sourceId: string, pinned: boolean) => {
+    setState(prev => {
+      if (prev.status !== 'settings' && prev.status !== 'ready') return prev;
+      const cfg = loadVelocityConfig();
+      cfg[sourceId] = { tier: cfg[sourceId]?.tier ?? 3, isVoice: pinned };
+      saveVelocityConfig(cfg);
+      const sources = prev.sources.map(s =>
+        s.id === sourceId ? { ...s, isVoice: pinned } : s
+      );
+      return { ...prev, sources };
+    });
+  }, []);
+
+  const handleDeleteSource = useCallback(async (sourceId: string) => {
+    const s = stateRef.current;
+    if (s.status !== 'settings') return;
+    await s.adapter.removeSource(sourceId);
+    const rawSources = await s.adapter.fetchSources();
+    const sources = applySavedVelocity(rawSources, loadVelocityConfig());
+    const categories = await s.adapter.fetchCategories().catch(() => [] as Category[]);
+    setState(prev =>
+      prev.status === 'settings' ? { ...prev, sources, categories } : prev
+    );
+  }, []);
 
   const handleUnmute = useCallback((sourceId: string) => {
     unmuteSource(sourceId);
@@ -335,6 +375,7 @@ export function App() {
               hidden={inSettings}
               mutedIds={mutedIds}
               onMute={handleMute}
+              expiryDays={expiryDays}
             />
             {inSettings && (
               <Settings
@@ -356,6 +397,9 @@ export function App() {
                   dismissSuggestion(sourceId);
                   setSuggestions(generateSuggestions(state.sources));
                 }}
+                onDeleteSource={handleDeleteSource}
+                onExpiryChange={setExpiryDays}
+                onTogglePin={handleTogglePin}
               />
             )}
           </>
@@ -434,9 +478,10 @@ interface ReadyViewProps {
   hidden?: boolean;
   mutedIds: Set<string>;
   onMute: (sourceId: string, mutedUntil: number) => void;
+  expiryDays: number;
 }
 
-function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedIds, onMute }: ReadyViewProps) {
+function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedIds, onMute, expiryDays }: ReadyViewProps) {
   const [openArticle, setOpenArticle]       = useState<Article | null>(null);
   const [showHelp, setShowHelp]             = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -456,11 +501,17 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
 
   const sourceMap = new Map(sources.map(s => [s.id, s]));
 
+  const expiryCutoff = expiryDays > 0
+    ? new Date(now - expiryDays * 24 * 60 * 60 * 1000)
+    : null;
+
   const filteredArticles = articles.filter(a => {
     if (mutedIds.has(a.sourceId)) return false;
     const starred = starredOverrides.has(a.id) ? starredOverrides.get(a.id) : a.isStarred;
     if (savedOnly && !starred) return false;
     if (unreadOnly && a.isRead) return false;
+    // Auto-expiry: remove old articles unless saved
+    if (expiryCutoff && !starred && a.publishedAt < expiryCutoff) return false;
     if (activeCategory !== null) {
       const src = sourceMap.get(a.sourceId);
       if (!src || src.categoryId !== activeCategory) return false;
@@ -517,21 +568,35 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
 
   const river = useRiver(scoredItems, handleOpen, handleSave, handleRead, handleShare);
 
-  const savedIds = new Set(
+  const savedIds = useMemo(() => new Set(
     articles
       .filter(a => starredOverrides.has(a.id) ? starredOverrides.get(a.id) : a.isStarred)
       .map(a => a.id),
-  );
+  ), [articles, starredOverrides]);
+
+  // Count unread articles per category for the filter bar
+  const unreadByCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of articles) {
+      if (a.isRead || mutedIds.has(a.sourceId)) continue;
+      const src = sourceMap.get(a.sourceId);
+      if (src?.categoryId) {
+        counts.set(src.categoryId, (counts.get(src.categoryId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [articles, mutedIds, sourceMap]);
 
   const emptyMessage = savedOnly ? 'No saved articles yet.' : 'The stream is quiet.';
 
   return (
-    <div style={hidden ? { display: 'none' } : undefined}>
+    <div hidden={hidden}>
       <FilterBar
         categories={categories}
         activeCategory={activeCategory}
         unreadOnly={unreadOnly}
         savedOnly={savedOnly}
+        unreadByCategory={unreadByCategory}
         onCategory={setActiveCategory}
         onUnreadOnly={setUnreadOnly}
         onSavedOnly={setSavedOnly}

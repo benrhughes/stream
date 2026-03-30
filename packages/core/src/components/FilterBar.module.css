@@ -60,3 +60,25 @@
 .statusPills.solo {
   margin-left: auto;
 }
+
+/* Unread count badge inside category pills */
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  margin-left: 0.25rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 7px;
+  background: var(--text-muted);
+  color: var(--bg);
+}
+
+.pill.active .count {
+  background: var(--bg);
+  color: var(--accent-new);
+}

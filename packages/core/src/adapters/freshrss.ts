@@ -8,6 +8,7 @@ import type {
   Category,
   Article,
 } from '../types.js';
+import { extractImageFromHtml } from '../extractImage.js';
 
 // ---------------------------------------------------------------------------
 // Raw Google Reader API shapes
@@ -26,6 +27,11 @@ interface RawTag {
   id: string;           // "user/-/label/NAME"
 }
 
+interface RawEnclosure {
+  href?: string;
+  type?: string;
+}
+
 interface RawItem {
   id: string;           // "tag:google.com,2005:reader/item/HEX"
   title?: string | { content: string };
@@ -37,6 +43,7 @@ interface RawItem {
   content?: { content: string };
   origin?: { streamId: string };
   categories?: string[];
+  enclosure?: RawEnclosure[];
 }
 
 interface RawStreamContents {
@@ -52,6 +59,12 @@ function extractTitle(raw: RawItem['title']): string {
   if (!raw) return '(no title)';
   if (typeof raw === 'string') return raw;
   return raw.content ?? '(no title)';
+}
+
+function extractEnclosureImage(enclosures?: RawEnclosure[]): string | undefined {
+  if (!enclosures) return undefined;
+  const img = enclosures.find(e => e.type?.startsWith('image/') && e.href);
+  return img?.href;
 }
 
 function normaliseItem(item: RawItem): Article {
@@ -70,6 +83,10 @@ function normaliseItem(item: RawItem): Article {
   const isStarred =
     item.categories?.includes('user/-/state/com.google/starred') ?? false;
 
+  const imageUrl =
+    extractEnclosureImage(item.enclosure) ??
+    extractImageFromHtml(content);
+
   return {
     id:          item.id,
     sourceId:    item.origin?.streamId ?? '',
@@ -77,6 +94,7 @@ function normaliseItem(item: RawItem): Article {
     author:      item.author,
     url,
     content,
+    imageUrl,
     publishedAt: new Date((item.published ?? 0) * 1000),
     isRead,
     isStarred,

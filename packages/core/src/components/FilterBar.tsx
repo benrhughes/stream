@@ -6,6 +6,7 @@ interface FilterBarProps {
   activeCategory: string | null;
   unreadOnly: boolean;
   savedOnly: boolean;
+  unreadByCategory?: Map<string, number>;
   onCategory: (id: string | null) => void;
   onUnreadOnly: (v: boolean) => void;
   onSavedOnly: (v: boolean) => void;
@@ -16,11 +17,19 @@ export function FilterBar({
   activeCategory,
   unreadOnly,
   savedOnly,
+  unreadByCategory,
   onCategory,
   onUnreadOnly,
   onSavedOnly,
 }: FilterBarProps) {
-  const hasCats = categories.length > 0;
+  // Show only categories with unread articles (plus the currently active one)
+  const visibleCats = unreadByCategory
+    ? categories.filter(cat =>
+        (unreadByCategory.get(cat.id) ?? 0) > 0 || activeCategory === cat.id
+      )
+    : categories;
+
+  const hasCats = visibleCats.length > 0;
 
   return (
     <div class={styles.bar}>
@@ -33,16 +42,20 @@ export function FilterBar({
           >
             All
           </button>
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              class={`${styles.pill} ${activeCategory === cat.id ? styles.active : ''}`}
-              onClick={() => onCategory(activeCategory === cat.id ? null : cat.id)}
-              aria-pressed={activeCategory === cat.id}
-            >
-              {cat.title}
-            </button>
-          ))}
+          {visibleCats.map(cat => {
+            const count = unreadByCategory?.get(cat.id) ?? 0;
+            return (
+              <button
+                key={cat.id}
+                class={`${styles.pill} ${activeCategory === cat.id ? styles.active : ''}`}
+                onClick={() => onCategory(activeCategory === cat.id ? null : cat.id)}
+                aria-pressed={activeCategory === cat.id}
+              >
+                {cat.title}
+                {count > 0 && <span class={styles.count}>{count}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
       <div class={`${styles.statusPills} ${hasCats ? '' : styles.solo}`}>

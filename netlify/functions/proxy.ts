@@ -14,7 +14,10 @@ const HOP_BY_HOP = new Set([
 ]);
 
 // Headers to forward from the proxy response back to the browser
-const FORWARD_RESPONSE = ['content-type', 'link', 'x-reader-google-bad-token'];
+const FORWARD_RESPONSE = [
+  'content-type', 'link', 'x-reader-google-bad-token',
+  'cache-control', 'etag', 'last-modified',
+];
 
 interface NetlifyEvent {
   httpMethod: string;

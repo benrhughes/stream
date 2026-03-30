@@ -98,6 +98,7 @@ export function RiverCard({
               aria-hidden="true"
               width={16}
               height={16}
+              loading="lazy"
               onError={handleFaviconError}
             />
           ) : (
@@ -190,19 +191,33 @@ export function RiverCard({
         </div>
       </div>
 
-      <button
-        class={styles.titleLink}
-        onClick={() => onOpen(article.id)}
-        aria-label={`Read: ${article.title}`}
-      >
-        <h2 class={styles.title}>{article.title}</h2>
-      </button>
+      <div class={styles.body}>
+        <div class={styles.bodyText}>
+          <button
+            class={styles.titleLink}
+            onClick={() => onOpen(article.id)}
+            aria-label={`Read: ${article.title}`}
+          >
+            <h2 class={styles.title}>{article.title}</h2>
+          </button>
 
-      {preview && (
-        <button class={styles.preview} onClick={() => onOpen(article.id)} aria-label={`Read: ${article.title}`}>
-          {preview}
-        </button>
-      )}
+          {preview && (
+            <button class={styles.preview} onClick={() => onOpen(article.id)} aria-label={`Read: ${article.title}`}>
+              {preview}
+            </button>
+          )}
+        </div>
+
+        {article.imageUrl && (
+          <img
+            class={styles.thumbnail}
+            src={article.imageUrl}
+            alt={article.title}
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
+      </div>
     </article>
   );
 }

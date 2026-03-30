@@ -7,6 +7,7 @@ export interface Article {
   author?: string;
   url: string;
   content: string;        // HTML content or summary from the backend
+  imageUrl?: string;       // Featured / lead image extracted from content or enclosures
   publishedAt: Date;
   isRead: boolean;
   isStarred: boolean;
