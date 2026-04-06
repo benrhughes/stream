@@ -127,10 +127,10 @@ Pull and run the latest image:
 
 ```bash
 # Pull from GitHub Container Registry
-docker pull ghcr.io/benrhughes/stream:latest
+docker pull ghcr.io/dynamicskillset/stream:latest
 
 # Run the container
-docker run -p 8080:80 ghcr.io/benrhughes/stream:latest
+docker run -p 8080:80 ghcr.io/dynamicskillset/stream:latest
 ```
 
 Or build locally:
