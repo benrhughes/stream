@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+### Infrastructure
+
+- **Docker deployment** — Stream can now be deployed as a Docker container, served by nginx. Images are automatically built and published to GitHub Container Registry on each release. Thanks to [@benrhughes](https://github.com/benrhughes) for contributing Docker support.
+
 ## 0.8.0
 
 ### Improvements
