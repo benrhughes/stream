@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+### Bug fixes
+
+- **Docker arm64 support** — the 0.9.0 image was built for `amd64` only; images are now published for both `linux/amd64` and `linux/arm64`.
+
 ## 0.9.0
 
 ### Infrastructure
