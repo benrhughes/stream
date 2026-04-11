@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.7
 
 ### Trust model
 
@@ -13,6 +13,16 @@
 ### Testing
 
 - New Playwright spec `e2e/connect.spec.ts` covering the mode picker, each branch (direct / BYOP / shared), the credentials form, and the migration banner's show / switch / dismiss behaviours.
+
+### Landing page
+
+- Landing page now lives in the monorepo at `packages/web/landing/` and is built into `public/about/` as part of the standard build. Served at `/about` by the same nginx instance as the app.
+
+### Security
+
+- All proxy implementations (Netlify, Cloudflare Workers, Deno Deploy, Vercel Edge) now block requests to private/loopback/link-local addresses, preventing SSRF against instance metadata services and internal hosts.
+- BYOP proxy URL validated for `https:` scheme before credentials are accepted.
+- 502 error responses no longer reflect raw upstream error messages.
 
 ## 0.9.6
 
