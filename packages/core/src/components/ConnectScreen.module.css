@@ -363,6 +363,15 @@
   line-height: 1.4;
 }
 
+/* Inline field-level error */
+.fieldError {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--color-error);
+  margin: 0.25rem 0 0;
+  line-height: 1.4;
+}
+
 /* Submit */
 .submit {
   display: flex;

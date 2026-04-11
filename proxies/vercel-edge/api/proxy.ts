@@ -29,6 +29,20 @@ const CORS_RESPONSE_HEADERS: Record<string, string> = {
   'access-control-max-age':       '86400',
 };
 
+function isPrivateHostname(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname === '0.0.0.0' ||
+    hostname === '::1' ||
+    hostname.endsWith('.local') ||
+    /^127\./.test(hostname) ||
+    /^10\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^169\.254\./.test(hostname)
+  );
+}
+
 export default async function handler(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_RESPONSE_HEADERS });
@@ -43,6 +57,9 @@ export default async function handler(request: Request): Promise<Response> {
     const parsed = new URL(targetUrl);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       throw new Error('Only http/https');
+    }
+    if (isPrivateHostname(parsed.hostname)) {
+      throw new Error('Private addresses not allowed');
     }
   } catch {
     return new Response('proxy: invalid or missing ?url= parameter', {
@@ -70,7 +87,7 @@ export default async function handler(request: Request): Promise<Response> {
     });
   } catch (err) {
     return new Response(
-      `proxy: upstream error — ${err instanceof Error ? err.message : String(err)}`,
+      'proxy: upstream unreachable',
       { status: 502, headers: CORS_RESPONSE_HEADERS },
     );
   }

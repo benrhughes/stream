@@ -17,17 +17,28 @@ export interface ByopDeployProps {
  *      cloud account.
  *   3. User pastes the resulting URL here and clicks Next.
  *
- * We do not validate that the URL actually works — that happens naturally
- * when the adapter tries to authenticate through it. A malformed URL fails
- * fast with a clear error message.
+ * URL is validated for HTTPS scheme before proceeding — all cloud proxy
+ * deployments must use HTTPS to avoid forwarding credentials in plaintext.
  */
 export function ByopDeploy({ onSubmit, onBack }: ByopDeployProps) {
-  const [url, setUrl] = useState('');
+  const [url, setUrl]     = useState('');
+  const [error, setError] = useState('');
 
   const handleNext = (e: Event) => {
     e.preventDefault();
+    setError('');
     const trimmed = url.trim().replace(/\/$/, '');
     if (!trimmed) return;
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'https:') {
+        setError('Proxy URL must use HTTPS.');
+        return;
+      }
+    } catch {
+      setError('Enter a valid URL.');
+      return;
+    }
     onSubmit(trimmed);
   };
 
@@ -66,6 +77,7 @@ export function ByopDeploy({ onSubmit, onBack }: ByopDeployProps) {
             autocomplete="off"
             spellcheck={false}
           />
+          {error && <p class={styles.fieldError}>{error}</p>}
           <p class={styles.hint}>
             The root URL of the proxy you just deployed. No trailing slash.
           </p>
