@@ -535,7 +535,7 @@
       </a>
       <div class="nav-links">
         <a class="btn-ghost" href="https://framagit.org/dynamicskillset/stream">Source</a>
-        <a class="btn-primary" href="https://framagit.org/dynamicskillset/stream">Deploy free ↗</a>
+        <a class="btn-primary" href="/">Open Stream ↗</a>
       </div>
     </div>
   </nav>
@@ -546,7 +546,7 @@
     <h1 class="hero-title">The river is what's<br><em>here right now</em></h1>
     <p class="hero-sub">Articles arrive, linger, and fade at their own pace. No unread counts. No catching up. You are not behind.</p>
     <div class="hero-actions">
-      <a class="btn-primary btn-lg" href="https://framagit.org/dynamicskillset/stream">Get Stream ↗</a>
+      <a class="btn-primary btn-lg" href="/">Open Stream ↗</a>
       <a class="btn-outline btn-lg" href="#how-it-works">How it works</a>
     </div>
 
@@ -599,7 +599,7 @@
       <div class="feature">
         <span class="feature-icon">🔒</span>
         <h3 class="feature-title">Your backend, your data</h3>
-        <p class="feature-desc">Stream connects to FreshRSS or Feedbin. It reads your feeds — it never stores them. Nothing to leak, nothing to sell.</p>
+        <p class="feature-desc">Stream connects to Feedbin or FreshRSS straight from your browser. Your credentials stay on your machine. Nothing to leak, nothing to sell.</p>
       </div>
       <div class="feature">
         <span class="feature-icon">⌨️</span>
@@ -670,8 +670,8 @@
   <!-- Getting started -->
   <section id="get-started">
     <p class="section-label">Getting started</p>
-    <h2 class="section-title">You need a backend first</h2>
-    <p class="section-sub">Stream is a frontend only. Pick one of these and set it up before you deploy Stream.</p>
+    <h2 class="section-title">Three steps to the river</h2>
+    <p class="section-sub">Stream is a hosted web app at <a href="/" style="color:var(--accent)">stream.dynamicskillset.com</a>. Pick a backend, open Stream, and read. Your credentials live in your browser — this site never stores them.</p>
 
     <div class="backends">
       <div class="backend-card">
@@ -697,15 +697,15 @@
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <p class="step-title">Fork this repo and deploy</p>
-          <p class="step-desc">Fork <a href="https://framagit.org/dynamicskillset/stream" style="color:var(--accent)">dynamicskillset/stream</a> on Framagit. The fastest path is Netlify: add your fork as a new site and build settings come from <code style="font-size:0.875em;background:var(--surface2);padding:0.1em 0.35em;border-radius:3px">netlify.toml</code> automatically. Cloudflare Workers, Deno Deploy, and Vercel templates also live under <code style="font-size:0.875em;background:var(--surface2);padding:0.1em 0.35em;border-radius:3px">proxies/</code> for a fully self-hosted trust story.</p>
+          <p class="step-title">Open Stream</p>
+          <p class="step-desc">Head to <a href="/" style="color:var(--accent)">stream.dynamicskillset.com</a>. No install, no account on this site, no build step — it is a static page that runs entirely in your browser.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-body">
-          <p class="step-title">Open Stream and connect</p>
-          <p class="step-desc">Visit your deployed URL, pick a connection mode (direct, your own proxy, or the shared proxy), enter your backend credentials, and the river starts flowing.</p>
+          <p class="step-title">Connect and read</p>
+          <p class="step-desc">Paste your Feedbin or FreshRSS credentials. They stay in your browser's local storage. In direct mode Stream talks straight to your RSS service and this site's servers never see your credentials at all. Prefer to self-host the whole thing? Fork <a href="https://framagit.org/dynamicskillset/stream" style="color:var(--accent)">dynamicskillset/stream</a> on Framagit.</p>
         </div>
       </div>
     </div>
