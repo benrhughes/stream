@@ -4,7 +4,8 @@ import { useRiver } from './hooks/useRiver.js';
 import { useTheme } from './hooks/useTheme.js';
 import { River } from './components/River.js';
 import { AppShell } from './components/AppShell.js';
-import { ConnectScreen } from './components/ConnectScreen.js';
+import { ConnectScreen, SHARED_PROXY_BASE } from './components/ConnectScreen.js';
+import connectStyles from './components/ConnectScreen.module.css';
 import { Settings } from './components/Settings.js';
 import { ReadingView } from './components/ReadingView.js';
 import { KeyboardHelp } from './components/KeyboardHelp.js';
@@ -60,13 +61,35 @@ function applySavedVelocity(sources: Source[], cfg: VelocityConfig): Source[] {
 // ---------------------------------------------------------------------------
 
 const CONNECTION_KEY = 'stream-connection';
+const MIGRATION_BANNER_DISMISSED_KEY = 'stream-migration-banner-dismissed';
 
 type SavedConnection = AdapterConfig & { adapterId: string };
 
+/**
+ * Loads the persisted connection and backfills fields that did not exist
+ * in older versions of Stream.
+ *
+ * Pre-0.10 saves have no `connectionMode` or `proxyBase` — they implicitly
+ * used the shared Netlify proxy on production builds. We mark those as
+ * `shared` mode and point them at `SHARED_PROXY_BASE` so the adapters keep
+ * working without the user noticing. A one-time banner on the ready screen
+ * nudges them toward a stronger trust mode.
+ *
+ * In dev builds the same legacy blobs get rewritten to `dev` mode with the
+ * Vite dev proxy, so running `npm run dev` on an old localStorage keeps
+ * working without any user action.
+ */
 function loadSavedConnection(): SavedConnection | null {
   try {
     const raw = localStorage.getItem(CONNECTION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedConnection;
+
+    if (parsed.connectionMode === undefined) {
+      parsed.connectionMode = import.meta.env.DEV ? 'dev' : 'shared';
+      parsed.proxyBase = import.meta.env.DEV ? '/dev-proxy' : SHARED_PROXY_BASE;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -132,6 +155,33 @@ export function App() {
   const [paused, setPaused] = useState(() => isPaused());
   const [suggestions, setSuggestions] = useState<VelocitySuggestion[]>([]);
   const [expiryDays, setExpiryDays] = useState(() => loadDisplayPrefs().expiryDays);
+
+  /**
+   * Migration banner visibility. Shown once to users whose saved connection
+   * came from a pre-0.10 Stream build and therefore implicitly runs in
+   * `shared` mode. Dismissal is persisted so the banner never reappears.
+   */
+  const [showMigrationBanner, setShowMigrationBanner] = useState(() => {
+    if (import.meta.env.DEV) return false;
+    if (localStorage.getItem(MIGRATION_BANNER_DISMISSED_KEY) === '1') return false;
+    const saved = loadSavedConnection();
+    return saved?.connectionMode === 'shared';
+  });
+
+  const dismissMigrationBanner = useCallback(() => {
+    localStorage.setItem(MIGRATION_BANNER_DISMISSED_KEY, '1');
+    setShowMigrationBanner(false);
+  }, []);
+
+  const switchFromSharedProxy = useCallback(() => {
+    // Clear the saved connection and bounce back to the connect screen,
+    // where the user picks a new mode. Their previous credentials are
+    // deliberately not preserved — re-entering them is the honest reset.
+    localStorage.removeItem(CONNECTION_KEY);
+    localStorage.setItem(MIGRATION_BANNER_DISMISSED_KEY, '1');
+    setShowMigrationBanner(false);
+    setState({ status: 'connect' });
+  }, []);
 
   // Apply saved display prefs on mount (text size, fade intensity, accent colour)
   useEffect(() => {
@@ -389,9 +439,10 @@ export function App() {
     const saved = loadSavedConnection();
     if (!saved) return;
 
+    const proxyBase = saved.proxyBase ?? null;
     const importAdapter = saved.adapterId === 'feedbin'
-      ? import('./adapters/feedbin.js').then(m => new m.FeedbinAdapter())
-      : import('./adapters/freshrss.js').then(m => new m.FreshRSSAdapter());
+      ? import('./adapters/feedbin.js').then(m => new m.FeedbinAdapter(proxyBase))
+      : import('./adapters/freshrss.js').then(m => new m.FreshRSSAdapter(proxyBase));
 
     importAdapter.then(adapter =>
       adapter.authenticate(saved).then(result => {
@@ -443,6 +494,12 @@ export function App() {
 
         {(state.status === 'ready' || state.status === 'settings') && (
           <>
+            {showMigrationBanner && (
+              <MigrationBanner
+                onSwitch={switchFromSharedProxy}
+                onDismiss={dismissMigrationBanner}
+              />
+            )}
             <ReadyView
               adapter={state.adapter}
               sources={state.sources}
@@ -491,6 +548,40 @@ export function App() {
 // ---------------------------------------------------------------------------
 // Sub-views
 // ---------------------------------------------------------------------------
+
+/**
+ * One-time nudge shown to users whose saved connection was created by a
+ * pre-0.10 Stream build. Those connections implicitly use the shared
+ * Netlify proxy on production. The banner explains in one line and offers
+ * a switch or a dismiss.
+ *
+ * Uses the same CSS module as the connect screen so the styling stays in
+ * one place.
+ */
+function MigrationBanner({
+  onSwitch,
+  onDismiss,
+}: {
+  onSwitch:  () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div class={connectStyles.migrationBanner} role="status">
+      <span class={connectStyles.migrationBannerText}>
+        Your connection is routed through this site's shared proxy, which means
+        its operator can read your credentials. You can switch to a private mode.
+      </span>
+      <span class={connectStyles.migrationBannerActions}>
+        <button type="button" class={connectStyles.migrationBannerButton} onClick={onSwitch}>
+          Switch
+        </button>
+        <button type="button" class={connectStyles.migrationBannerDismiss} onClick={onDismiss} aria-label="Dismiss">
+          Dismiss
+        </button>
+      </span>
+    </div>
+  );
+}
 
 function LoadingView() {
   return (

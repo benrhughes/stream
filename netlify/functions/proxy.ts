@@ -5,6 +5,12 @@
  * bypassing browser CORS restrictions. Mirrors the Vite dev-proxy plugin.
  *
  * Usage: /.netlify/functions/proxy?url=<encodeURIComponent(targetUrl)>
+ *
+ * CORS note: this proxy is designed to serve both same-origin callers (the
+ * Netlify deployment itself) and cross-origin callers (someone using it as
+ * a BYOP endpoint). Cross-origin use triggers a browser CORS preflight, so
+ * OPTIONS requests are answered locally with permissive allow-headers; they
+ * are never forwarded upstream.
  */
 
 const HOP_BY_HOP = new Set([
@@ -33,7 +39,19 @@ interface NetlifyResponse {
   body: string;
 }
 
+const CORS_RESPONSE_HEADERS: Record<string, string> = {
+  'access-control-allow-origin':  '*',
+  'access-control-allow-headers': 'authorization,content-type',
+  'access-control-allow-methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
+  'access-control-max-age':       '86400',
+};
+
 export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => {
+  // Answer CORS preflights locally — never forward OPTIONS to upstream.
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_RESPONSE_HEADERS, body: '' };
+  }
+
   const encoded = event.queryStringParameters?.url ?? '';
 
   let targetUrl: string;
@@ -44,7 +62,11 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
       throw new Error('Only http/https');
     }
   } catch {
-    return { statusCode: 400, body: 'proxy: invalid or missing ?url= parameter' };
+    return {
+      statusCode: 400,
+      headers:    CORS_RESPONSE_HEADERS,
+      body:       'proxy: invalid or missing ?url= parameter',
+    };
   }
 
   // Forward request headers, stripping hop-by-hop and origin-sensitive ones
@@ -66,13 +88,12 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
   } catch (err) {
     return {
       statusCode: 502,
-      body: `proxy: upstream error — ${err instanceof Error ? err.message : String(err)}`,
+      headers:    CORS_RESPONSE_HEADERS,
+      body:       `proxy: upstream error — ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 
-  const resHeaders: Record<string, string> = {
-    'access-control-allow-origin': '*',
-  };
+  const resHeaders: Record<string, string> = { ...CORS_RESPONSE_HEADERS };
   for (const name of FORWARD_RESPONSE) {
     const value = upstream.headers.get(name);
     if (value) resHeaders[name] = value;
