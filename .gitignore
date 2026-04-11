@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 .vite/
+packages/web/public/about/
 
 # Environment / secrets
 .env
