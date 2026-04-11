@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Trust model
+
+- **Connection modes** — Stream's first-run flow now asks how it should reach your RSS service. Three options: **direct** (browser talks straight to your FreshRSS server, requires CORS headers, strongest trust), **your own proxy** (deploy a tiny proxy under your own cloud account, works for both backends), or **this site's shared proxy** (the Netlify function that ships with the deployment, opt-in with an explicit trust warning). The shared proxy is no longer the implicit default on hosted deployments like `stream.dynamicskillset.com`.
+- **BYOP deploy templates** — new `proxies/` directory with ready-to-deploy ports of the Netlify proxy function for Cloudflare Workers, Deno Deploy, and Vercel Edge Functions. Each has its own README walking through `wrangler deploy` / `deployctl` / `vercel --prod`.
+- **Preflight handling in the proxy** — the Netlify function and all three ports now answer CORS preflight OPTIONS requests locally rather than forwarding them upstream. This is what makes the BYOP mode (cross-origin from Stream's static page) actually work in the browser.
+- **Adapters take proxy base via constructor** — `FeedbinAdapter` and `FreshRSSAdapter` now accept the proxy base URL as a constructor argument instead of reading `VITE_PROXY_URL` at module load time. This is what lets each user pick their own mode at runtime without rebuilding Stream.
+- **Migration for existing users** — saved connections from before this change are backfilled to `shared` mode on load, so nothing breaks. A one-time banner on the river explains what that means and offers to switch to a private mode, or to dismiss the nudge.
+
+### Testing
+
+- New Playwright spec `e2e/connect.spec.ts` covering the mode picker, each branch (direct / BYOP / shared), the credentials form, and the migration banner's show / switch / dismiss behaviours.
+
 ## 0.9.6
 
 ### Testing

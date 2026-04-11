@@ -123,6 +123,17 @@ export class FreshRSSAdapter implements StreamAdapter {
   private authToken:  string|null = null;
   private tToken:     string|null = null;
 
+  /**
+   * Proxy base URL. `null` means direct (no proxy); the browser talks to
+   * the FreshRSS server itself. Direct mode only works if the FreshRSS
+   * server sends CORS headers — see the README for the nginx snippet.
+   */
+  private readonly proxyBase: string | null;
+
+  constructor(proxyBase: string | null = null) {
+    this.proxyBase = proxyBase;
+  }
+
   // --- Authentication -------------------------------------------------------
 
   async authenticate(config: AdapterConfig): Promise<AuthResult> {
@@ -408,21 +419,12 @@ export class FreshRSSAdapter implements StreamAdapter {
   }
 
   /**
-   * Routes requests through a same-origin proxy to avoid CORS restrictions.
-   *
-   * - Dev: Vite's devProxyPlugin handles /dev-proxy.
-   * - Production (Netlify): VITE_PROXY_URL is set to /.netlify/functions/proxy.
-   * - Other production hosts: VITE_PROXY_URL can point to any compatible proxy,
-   *   or leave unset to make direct requests (requires CORS headers on the backend).
+   * Wrap an upstream URL with the configured proxy, or return it unchanged
+   * for direct mode. Direct mode only works if the FreshRSS server sends
+   * CORS headers.
    */
   private proxyUrl(url: string): string {
-    if (import.meta.env.DEV) {
-      return `/dev-proxy?url=${encodeURIComponent(url)}`;
-    }
-    const base = import.meta.env.VITE_PROXY_URL;
-    if (base) {
-      return `${base}?url=${encodeURIComponent(url)}`;
-    }
-    return url;
+    if (!this.proxyBase) return url;
+    return `${this.proxyBase}?url=${encodeURIComponent(url)}`;
   }
 }

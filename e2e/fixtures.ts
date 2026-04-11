@@ -74,10 +74,14 @@ export const STREAM_RESPONSE = {
   ],
 };
 
-// localStorage connection config that skips the connect screen
+// localStorage connection config that skips the connect screen.
+// Tests use direct mode so Playwright's page.route() can intercept the
+// upstream FreshRSS URLs directly (no proxy rewriting in the way).
 export const SAVED_CONNECTION = {
-  adapterId: 'freshrss',
-  baseUrl: BASE_URL,
-  username: 'testuser',
-  password: 'testpass',
+  adapterId:      'freshrss',
+  baseUrl:        BASE_URL,
+  username:       'testuser',
+  password:       'testpass',
+  connectionMode: 'direct',
+  proxyBase:      null,
 };

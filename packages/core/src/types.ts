@@ -37,11 +37,34 @@ export interface Category {
 
 // --- Adapter config / auth ---
 
+/**
+ * How Stream reaches the RSS backend from the browser.
+ *
+ * - `direct`   — no proxy; the browser calls the backend directly.
+ *                Only works when the backend sends CORS headers.
+ * - `byop`     — "bring your own proxy": the user deployed a proxy under
+ *                their own cloud account and pasted the URL.
+ * - `shared`   — route through whatever proxy the current origin offers
+ *                (e.g. /.netlify/functions/proxy at stream.dynamicskillset.com).
+ *                Opt-in, with a trust warning — the proxy operator can read
+ *                credentials from platform logs.
+ * - `dev`      — local Vite dev server's /dev-proxy helper. Implicit; never
+ *                surfaced in the UI.
+ */
+export type ConnectionMode = 'direct' | 'byop' | 'shared' | 'dev';
+
 export interface AdapterConfig {
   baseUrl?: string;       // for self-hosted adapters
   username?: string;
   password?: string;
   apiKey?: string;
+  connectionMode?: ConnectionMode;
+  /**
+   * Base URL of the proxy that adapter fetches should go through.
+   * `null` or absent means direct (no proxy).
+   * Shape: `${proxyBase}?url=<encoded upstream URL>`.
+   */
+  proxyBase?: string | null;
 }
 
 export interface AuthResult {

@@ -12,17 +12,6 @@ import { extractImageFromHtml } from '../extractImage.js';
 
 const FEEDBIN_BASE = 'https://api.feedbin.com/v2';
 
-function proxyUrl(url: string): string {
-  if (import.meta.env.DEV) {
-    return `/dev-proxy?url=${encodeURIComponent(url)}`;
-  }
-  const base = import.meta.env.VITE_PROXY_URL;
-  if (base) {
-    return `${base}?url=${encodeURIComponent(url)}`;
-  }
-  return url;
-}
-
 // ---------------------------------------------------------------------------
 // Raw Feedbin API shapes
 // ---------------------------------------------------------------------------
@@ -98,12 +87,33 @@ export class FeedbinAdapter implements StreamAdapter {
   private unreadIds         = new Set<string>();
   private starredIds        = new Set<string>();
 
+  /**
+   * Proxy base URL. `null` means direct (no proxy); the browser talks to
+   * Feedbin itself. Note: Feedbin does not send CORS headers, so direct
+   * mode does not actually work in a normal browser — it's only useful
+   * for tests that mock `https://api.feedbin.com` routes.
+   */
+  private readonly proxyBase: string | null;
+
+  constructor(proxyBase: string | null = null) {
+    this.proxyBase = proxyBase;
+  }
+
+  /**
+   * Wrap an upstream URL with the configured proxy, or return it unchanged
+   * for direct mode.
+   */
+  private proxyUrl(url: string): string {
+    if (!this.proxyBase) return url;
+    return `${this.proxyBase}?url=${encodeURIComponent(url)}`;
+  }
+
   // --- Authentication -------------------------------------------------------
 
   async authenticate(config: AdapterConfig): Promise<AuthResult> {
     this.credentials = btoa(`${config.username ?? ''}:${config.password ?? ''}`);
 
-    const res = await fetch(proxyUrl(`${FEEDBIN_BASE}/authentication.json`), {
+    const res = await fetch(this.proxyUrl(`${FEEDBIN_BASE}/authentication.json`), {
       headers: this.authHeaders(),
     });
 
@@ -126,8 +136,8 @@ export class FeedbinAdapter implements StreamAdapter {
 
   async fetchSources(): Promise<Source[]> {
     const [subsRes, taggingsRes] = await Promise.all([
-      fetch(proxyUrl(`${FEEDBIN_BASE}/subscriptions.json`), { headers: this.authHeaders() }),
-      fetch(proxyUrl(`${FEEDBIN_BASE}/taggings.json`),      { headers: this.authHeaders() }),
+      fetch(this.proxyUrl(`${FEEDBIN_BASE}/subscriptions.json`), { headers: this.authHeaders() }),
+      fetch(this.proxyUrl(`${FEEDBIN_BASE}/taggings.json`),      { headers: this.authHeaders() }),
     ]);
     if (!subsRes.ok) {
       const body = await subsRes.text().catch(() => '');
@@ -159,7 +169,7 @@ export class FeedbinAdapter implements StreamAdapter {
   }
 
   async fetchCategories(): Promise<Category[]> {
-    const res = await fetch(proxyUrl(`${FEEDBIN_BASE}/taggings.json`), {
+    const res = await fetch(this.proxyUrl(`${FEEDBIN_BASE}/taggings.json`), {
       headers: this.authHeaders(),
     });
     if (!res.ok) {
@@ -184,7 +194,7 @@ export class FeedbinAdapter implements StreamAdapter {
 
     // On the first page, refresh unread + starred ID sets in parallel
     const [entriesRes, freshUnread, freshStarred] = await Promise.all([
-      fetch(proxyUrl(`${FEEDBIN_BASE}/entries.json?${params}`), { headers: this.authHeaders() }),
+      fetch(this.proxyUrl(`${FEEDBIN_BASE}/entries.json?${params}`), { headers: this.authHeaders() }),
       options.continuation ? null : this.fetchIdList('unread_entries'),
       options.continuation ? null : this.fetchIdList('starred_entries'),
     ]);
@@ -226,7 +236,7 @@ export class FeedbinAdapter implements StreamAdapter {
   // --- State ----------------------------------------------------------------
 
   async setArticleRead(articleId: string): Promise<void> {
-    await fetch(proxyUrl(`${FEEDBIN_BASE}/unread_entries.json`), {
+    await fetch(this.proxyUrl(`${FEEDBIN_BASE}/unread_entries.json`), {
       method:  'DELETE',
       headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
       body:    JSON.stringify({ unread_entries: [parseInt(articleId, 10)] }),
@@ -234,7 +244,7 @@ export class FeedbinAdapter implements StreamAdapter {
   }
 
   async setArticleStarred(articleId: string, starred: boolean): Promise<void> {
-    await fetch(proxyUrl(`${FEEDBIN_BASE}/starred_entries.json`), {
+    await fetch(this.proxyUrl(`${FEEDBIN_BASE}/starred_entries.json`), {
       method:  starred ? 'POST' : 'DELETE',
       headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
       body:    JSON.stringify({ starred_entries: [parseInt(articleId, 10)] }),
@@ -247,7 +257,7 @@ export class FeedbinAdapter implements StreamAdapter {
     // Delete existing tagging for this feed, if any
     const oldTaggingId = this.feedIdToTaggingId.get(sourceId);
     if (oldTaggingId !== undefined) {
-      await fetch(proxyUrl(`${FEEDBIN_BASE}/taggings/${oldTaggingId}.json`), {
+      await fetch(this.proxyUrl(`${FEEDBIN_BASE}/taggings/${oldTaggingId}.json`), {
         method:  'DELETE',
         headers: this.authHeaders(),
       });
@@ -255,7 +265,7 @@ export class FeedbinAdapter implements StreamAdapter {
     }
 
     // Create new tagging (categoryId is the tag name for Feedbin)
-    const res = await fetch(proxyUrl(`${FEEDBIN_BASE}/taggings.json`), {
+    const res = await fetch(this.proxyUrl(`${FEEDBIN_BASE}/taggings.json`), {
       method:  'POST',
       headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
       body:    JSON.stringify({ feed_id: parseInt(sourceId, 10), name: categoryId }),
@@ -271,7 +281,7 @@ export class FeedbinAdapter implements StreamAdapter {
   }
 
   async addSource(feedUrl: string): Promise<Source> {
-    const res = await fetch(proxyUrl(`${FEEDBIN_BASE}/subscriptions.json`), {
+    const res = await fetch(this.proxyUrl(`${FEEDBIN_BASE}/subscriptions.json`), {
       method:  'POST',
       headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
       body:    JSON.stringify({ feed_url: feedUrl }),
@@ -289,7 +299,7 @@ export class FeedbinAdapter implements StreamAdapter {
     const subId = this.feedIdToSubId.get(sourceId);
     if (!subId) throw new Error('Subscription ID not found — call fetchSources first');
 
-    const res = await fetch(proxyUrl(`${FEEDBIN_BASE}/subscriptions/${subId}.json`), {
+    const res = await fetch(this.proxyUrl(`${FEEDBIN_BASE}/subscriptions/${subId}.json`), {
       method:  'DELETE',
       headers: this.authHeaders(),
     });
@@ -327,7 +337,7 @@ export class FeedbinAdapter implements StreamAdapter {
   }
 
   private async fetchIdList(resource: 'unread_entries' | 'starred_entries'): Promise<number[]> {
-    const res = await fetch(proxyUrl(`${FEEDBIN_BASE}/${resource}.json`), {
+    const res = await fetch(this.proxyUrl(`${FEEDBIN_BASE}/${resource}.json`), {
       headers: this.authHeaders(),
     });
     if (!res.ok) return [];

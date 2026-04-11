@@ -33,7 +33,7 @@ The quickest way to run Stream is to deploy it to [Netlify](https://netlify.com)
 1. Fork this repo to your GitHub account.
 2. In Netlify, click **Add new site → Import an existing project** and connect your repo.
 3. Build settings are read from `netlify.toml` automatically. Click **Deploy**.
-4. Open your Netlify URL, enter your Feedbin or FreshRSS credentials, and you are done.
+4. Open your Netlify URL. Stream asks how it should reach your RSS service (direct, your own proxy, or the bundled Netlify function). Pick one, enter your credentials, and you are done. See [Your credentials](#your-credentials) below for what the three modes mean.
 
 ---
 
@@ -85,7 +85,17 @@ To enable: open Settings → AI assistant, get a free API key from [Google AI St
 
 Your Feedbin or FreshRSS username and password are stored only in your own browser. Stream does not have a central server, and nothing is sent to anyone but your RSS service.
 
-When you deploy to Netlify, API requests pass through a small function on your own Netlify account before reaching Feedbin or FreshRSS. That function sees your credentials on every request, so anyone with access to your Netlify account could find them in the function logs. For a personal deployment this is not a concern — it is your own account. Worth bearing in mind if you ever share a single deployment with other people.
+### How Stream reaches your RSS service
+
+Because browsers do not let JavaScript make authenticated cross-origin requests to APIs that do not send CORS headers, Stream needs a way to bridge that gap. On first run it asks you to pick one of three modes, each with an honest trade-off:
+
+**Direct.** The browser talks to your FreshRSS server directly. No proxy anywhere in the path, nothing for anyone to log. This is the strongest trust story — Stream is a static page and your credentials only ever touch your own server. Only works with FreshRSS, and only if your server sends CORS headers (see the nginx snippet below). Does not work with Feedbin, because Feedbin's API does not send CORS headers.
+
+**Your own proxy.** You deploy a tiny proxy (the same 90-odd lines of TypeScript as the bundled Netlify function) under your own Cloudflare, Deno Deploy, or Vercel account. Stream talks to your proxy; your proxy talks to Feedbin or FreshRSS. Your credentials pass through a server you control, whose logs you control, and which nobody else has access to. Ready-to-deploy templates for all three platforms live under [`proxies/`](./proxies/).
+
+**This site's shared proxy.** The quickest setup: route through the Netlify function that ships with the hosted deployment. But your credentials will pass through the operator's Netlify account on every request, and Netlify's platform logs every function invocation. An operator with bad intent or a compromised account could read your credentials from those logs. For a personal deployment where you are the operator this is fine. For a shared deployment like `stream.dynamicskillset.com` it is a real trust trade-off, and Stream will show you the warning before letting you pick it.
+
+If you already had a Stream connection from before this change, it still works — old connections keep using the shared proxy and a one-time banner on the river nudges you toward switching to a private mode.
 
 ---
 
