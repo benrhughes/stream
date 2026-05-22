@@ -99,16 +99,22 @@ function loadSavedConnection(): SavedConnection | null {
 // Article fetching — paginated, respects 2× max half-life fetch window
 // ---------------------------------------------------------------------------
 
-async function fetchAllArticles(
-  adapter: StreamAdapter,
-  sources: Source[],
-): Promise<Article[]> {
+/** Widest possible fetch window — covers tier-5 sources (168h half-life) × 2. */
+const CONSERVATIVE_SINCE = (): Date =>
+  new Date(Date.now() - 2 * HALF_LIVES[5] * 3_600_000);
+
+function articlesWindow(sources: Source[]): Date {
   const maxHalfLife = sources.reduce(
     (max, s) => Math.max(max, s.customHalfLife ?? HALF_LIVES[s.velocityTier]),
     HALF_LIVES[3],
   );
-  const since = new Date(Date.now() - 2 * maxHalfLife * 3_600_000);
+  return new Date(Date.now() - 2 * maxHalfLife * 3_600_000);
+}
 
+async function fetchAllArticles(
+  adapter: StreamAdapter,
+  since: Date,
+): Promise<Article[]> {
   const articles: Article[] = [];
   let continuation: string | undefined;
 
@@ -208,12 +214,17 @@ export function App() {
       setState({ status: 'ready', adapter, sources: cache.sources, articles: cache.articles, categories: cache.categories });
       setRefreshing(true);
       try {
-        const rawSources = await adapter.fetchSources();
-        const sources    = applySavedVelocity(rawSources, loadVelocityConfig());
-        const [articles, categories] = await Promise.all([
-          fetchAllArticles(adapter, sources),
+        // Fetch sources, articles, and categories in parallel.
+        // Articles use the conservative window so they can start without waiting
+        // for sources; we trim to the accurate window after sources arrive.
+        const [rawSources, articlesRaw, categories] = await Promise.all([
+          adapter.fetchSources(),
+          fetchAllArticles(adapter, CONSERVATIVE_SINCE()),
           adapter.fetchCategories().catch(() => [] as Category[]),
         ]);
+        const sources = applySavedVelocity(rawSources, loadVelocityConfig());
+        const window  = articlesWindow(sources);
+        const articles = articlesRaw.filter(a => a.publishedAt >= window);
         saveCache({ articles, sources, categories });
         setState(prev =>
           prev.status === 'ready'
@@ -229,12 +240,14 @@ export function App() {
       // First run or cache cleared — show loading skeleton until data arrives
       setState({ status: 'loading', adapter });
       try {
-        const rawSources = await adapter.fetchSources();
-        const sources    = applySavedVelocity(rawSources, loadVelocityConfig());
-        const [articles, categories] = await Promise.all([
-          fetchAllArticles(adapter, sources),
+        const [rawSources, articlesRaw, categories] = await Promise.all([
+          adapter.fetchSources(),
+          fetchAllArticles(adapter, CONSERVATIVE_SINCE()),
           adapter.fetchCategories().catch(() => [] as Category[]),
         ]);
+        const sources  = applySavedVelocity(rawSources, loadVelocityConfig());
+        const window   = articlesWindow(sources);
+        const articles = articlesRaw.filter(a => a.publishedAt >= window);
         saveCache({ articles, sources, categories });
         setState({ status: 'ready', adapter, sources, articles, categories });
       } catch (err) {
@@ -361,11 +374,14 @@ export function App() {
     if (s.status !== 'ready') return;
     setRefreshing(true);
     try {
-      const sources  = applySavedVelocity(
-        await s.adapter.fetchSources(), loadVelocityConfig()
-      );
-      const articles = await fetchAllArticles(s.adapter, sources);
-      const categories = await s.adapter.fetchCategories().catch(() => [] as Category[]);
+      const [rawSources, articlesRaw, categories] = await Promise.all([
+        s.adapter.fetchSources(),
+        fetchAllArticles(s.adapter, CONSERVATIVE_SINCE()),
+        s.adapter.fetchCategories().catch(() => [] as Category[]),
+      ]);
+      const sources  = applySavedVelocity(rawSources, loadVelocityConfig());
+      const window   = articlesWindow(sources);
+      const articles = articlesRaw.filter(a => a.publishedAt >= window);
       saveCache({ articles, sources, categories });
       setState(prev =>
         prev.status === 'ready'
