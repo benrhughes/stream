@@ -72,5 +72,8 @@ export function scoreRiver(
 
       return [{ article, score }];
     })
-    .sort((a, b) => b.article.publishedAt.getTime() - a.article.publishedAt.getTime());
+    .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      return b.article.publishedAt.getTime() - a.article.publishedAt.getTime();
+    });
 }
