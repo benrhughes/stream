@@ -176,7 +176,7 @@ Tech: Preact · Vite · CSS Modules
 
 ## Acknowledgements
 
-Docker support contributed by [@benrhughes](https://github.com/benrhughes).
+[@benrhughes](https://github.com/benrhughes) contributed Docker support and the performance improvements in v0.9.8: score-first river ordering, memoized derived data, a unified clock replacing per-card timers, and parallel startup fetching.
 
 ---
 
