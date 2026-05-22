@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.8
+
+### Performance
+
+- **Parallel startup fetch** — sources, articles, and categories now all fetch concurrently on first load and on background refresh. Previously articles couldn't begin until sources completed, adding a sequential ~400ms penalty every time. Articles use a conservative window up front and are trimmed to the per-source window once sources arrive.
+- **Score-first river ordering** — articles are now sorted by visibility score descending, with publish date as a tiebreaker for equal scores. Previously the river was sorted purely by date, which ignored the velocity model entirely.
+- **Memoized derived data** — `sourceMap`, `filteredArticles`, and `scoredItems` are now wrapped in `useMemo` so they only recompute when their inputs change rather than on every render.
+- **Single shared clock** — relative timestamps in cards and the reading view now use the app-level 60s clock rather than spinning up an independent `setInterval` per card. With a busy river this eliminated dozens of concurrent timers.
+- **Memoized per-card rendering** — preview text, reading-time, and HTML sanitisation in `RiverCard` and `ReadingView` are now memoized and only recomputed when article content changes.
+
 ## 0.9.7
 
 ### Trust model
