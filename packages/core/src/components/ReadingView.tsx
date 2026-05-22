@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Article, Source } from '../types.js';
-import { useRelativeTime } from '../hooks/useRelativeTime.js';
+import { formatRelativeTime } from '../hooks/useRelativeTime.js';
 import { getProgress, saveProgress, purgeProgress } from '../readingProgress.js';
 import styles from './ReadingView.module.css';
 
@@ -65,13 +65,14 @@ function sanitiseHtml(html: string): string {
 interface ReadingViewProps {
   article: Article;
   source?: Source;
+  now: number;
   isSaved?: boolean;
   onSave?: () => void;
   onClose: () => void;
 }
 
-export function ReadingView({ article, source, isSaved, onSave, onClose }: ReadingViewProps) {
-  const relTime = useRelativeTime(article.publishedAt);
+export function ReadingView({ article, source, now, isSaved, onSave, onClose }: ReadingViewProps) {
+  const relTime = formatRelativeTime(article.publishedAt, new Date(now));
   const overlayRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -85,11 +86,11 @@ export function ReadingView({ article, source, isSaved, onSave, onClose }: Readi
     }
   };
 
-  const readingMins = (() => {
+  const readingMins = useMemo(() => {
     const words = article.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
     if (words < 50) return null;
     return Math.max(1, Math.ceil(words / 200));
-  })();
+  }, [article.content]);
 
   // Close on Escape + focus trap; return focus to the triggering element on close
   useEffect(() => {
@@ -152,7 +153,7 @@ export function ReadingView({ article, source, isSaved, onSave, onClose }: Readi
     (e.target as HTMLImageElement).setAttribute('data-error', '');
   };
 
-  const safe = sanitiseHtml(article.content);
+  const safe = useMemo(() => sanitiseHtml(article.content), [article.content]);
 
   return (
     <div ref={overlayRef} class={styles.overlay} role="dialog" aria-modal="true" aria-label={article.title}>

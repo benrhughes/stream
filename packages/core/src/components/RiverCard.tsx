@@ -1,7 +1,7 @@
-import { useState } from 'preact/hooks';
+import { useState, useMemo } from 'preact/hooks';
 import type { ScoredArticle } from '../riverEngine.js';
 import type { Source } from '../types.js';
-import { useRelativeTime } from '../hooks/useRelativeTime.js';
+import { formatRelativeTime } from '../hooks/useRelativeTime.js';
 import { VISIBILITY_THRESHOLD } from '../riverEngine.js';
 import { MUTE_DURATIONS } from '../mutedSources.js';
 import styles from './RiverCard.module.css';
@@ -73,6 +73,7 @@ function scoreToAge(score: number): number {
 interface RiverCardProps {
   scored: ScoredArticle;
   source: Source;
+  now: number;
   isFocused: boolean;
   isSaved: boolean;
   isCopied?: boolean;
@@ -86,6 +87,7 @@ interface RiverCardProps {
 export function RiverCard({
   scored,
   source,
+  now,
   isFocused,
   isSaved,
   isCopied = false,
@@ -96,10 +98,10 @@ export function RiverCard({
   cardRef,
 }: RiverCardProps) {
   const { article } = scored;
-  const relTime = useRelativeTime(article.publishedAt);
+  const relTime = formatRelativeTime(article.publishedAt, new Date(now));
   const cardAge = scoreToAge(scored.score);
-  const preview = makePreview(article.content);
-  const mins = readingMins(article.content);
+  const preview = useMemo(() => makePreview(article.content), [article.content]);
+  const mins = useMemo(() => readingMins(article.content), [article.content]);
   const [copied, setCopied] = useState(false);
   const [showMuteMenu, setShowMuteMenu] = useState(false);
 

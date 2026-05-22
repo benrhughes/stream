@@ -698,29 +698,32 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const sourceMap = new Map(sources.map(s => [s.id, s]));
+  const sourceMap = useMemo(
+    () => new Map(sources.map(s => [s.id, s])),
+    [sources],
+  );
 
   const expiryCutoff = expiryDays > 0
     ? new Date(now - expiryDays * 24 * 60 * 60 * 1000)
     : null;
 
-  const filteredArticles = articles.filter(a => {
+  const filteredArticles = useMemo(() => articles.filter(a => {
     if (mutedIds.has(a.sourceId)) return false;
     const starred = starredOverrides.has(a.id) ? starredOverrides.get(a.id) : a.isStarred;
     if (savedOnly && !starred) return false;
     if (unreadOnly && a.isRead) return false;
-    // Auto-expiry: remove old articles unless saved
     if (expiryCutoff && !starred && a.publishedAt < expiryCutoff) return false;
     if (activeCategory !== null) {
       const src = sourceMap.get(a.sourceId);
       if (!src || src.categoryId !== activeCategory) return false;
     }
     return true;
-  });
+  }), [articles, mutedIds, starredOverrides, savedOnly, unreadOnly, expiryCutoff, activeCategory, sourceMap]);
 
-  const scoredItems = savedOnly
+  const scoredItems = useMemo(() => savedOnly
     ? scoreRiver(filteredArticles, sourceMap, now, true)
-    : scoreRiver(filteredArticles, sourceMap, now);
+    : scoreRiver(filteredArticles, sourceMap, now),
+  [filteredArticles, sourceMap, now, savedOnly]);
 
   const handleOpen = useCallback((article: Article) => {
     setOpenArticle(article);
@@ -811,6 +814,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
         focusedIndex={river.focusedIndex}
         sourceMap={sourceMap}
         savedIds={savedIds}
+        now={now}
         pendingUndo={river.pendingUndo}
         emptyMessage={emptyMessage}
         copiedId={copiedId}
@@ -824,6 +828,7 @@ function ReadyView({ adapter, sources, articles, categories, now, hidden, mutedI
         <ReadingView
           article={openArticle}
           source={sourceMap.get(openArticle.sourceId)}
+          now={now}
           isSaved={savedIds.has(openArticle.id)}
           onSave={() => handleSave(openArticle)}
           onClose={() => setOpenArticle(null)}

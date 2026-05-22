@@ -10,6 +10,7 @@ interface RiverProps {
   focusedIndex: number;
   sourceMap: Map<string, Source>;
   savedIds: Set<string>;
+  now: number;
   pendingUndo: { article: Article } | null;
   emptyMessage?: string;
   copiedId?: string | null;
@@ -25,6 +26,7 @@ export function River({
   focusedIndex,
   sourceMap,
   savedIds,
+  now,
   pendingUndo,
   emptyMessage = 'The stream is quiet.',
   copiedId,
@@ -70,6 +72,7 @@ export function River({
             key={scored.article.id}
             scored={scored}
             source={source}
+            now={now}
             isFocused={index === focusedIndex}
             isSaved={savedIds.has(scored.article.id)}
             isCopied={copiedId === scored.article.id}
